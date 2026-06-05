@@ -13,6 +13,7 @@ hashbrown = { workspace = true }
 indexmap = { workspace = true }
 odra = { workspace = true }
 odra-casper-wasm-env = { workspace = true }
+odra-build = { workspace = true }
 odra-core = { workspace = true }
 odra-macros = { workspace = true }
 

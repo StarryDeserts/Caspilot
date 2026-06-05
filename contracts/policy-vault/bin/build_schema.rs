@@ -1,5 +1,5 @@
 #![doc = "Binary for building schema definitions from Odra contracts."]
-#![allow(unused_imports, redundant_imports)]
+#![allow(unexpected_cfgs, unused_imports)]
 #![allow(clippy::single_component_path_imports)]
 
 use policy_vault;
