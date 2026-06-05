@@ -1828,69 +1828,42 @@ git commit -m "feat(policy_vault): pay() transfers CEP-18 and emits Paid"
 ### Task 1.12: WASM artifact build + smoke test
 
 **Files:**
-- Create: `contracts/policy-vault/bin/policy_vault.rs`
-- Modify: `contracts/policy-vault/Cargo.toml` — add `[[bin]]` target gated by feature
+- Create: `scripts/check-vault-wasm.mjs`
+- Modify: `scripts/check-cargo.mjs` — run the smoke check after the existing `cargo odra build`
+
+> Odra shape is locked by P1.0/P1.4: use the existing `cargo odra build` workflow and existing Odra build/schema bins. Do **not** add a raw Cargo `wasm32-unknown-unknown` bin target or `contracts/policy-vault/bin/policy_vault.rs`.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `scripts/check-vault-wasm.mjs`:
-```js
-import fs from 'node:fs';
-const p = 'target/wasm32-unknown-unknown/release/policy_vault.wasm';
-if (!fs.existsSync(p)) { console.error('wasm missing'); process.exit(1); }
-const sz = fs.statSync(p).size;
-if (sz < 5_000 || sz > 800_000) { console.error('wasm size out of range:', sz); process.exit(1); }
-console.log('ok size=' + sz);
-```
+Create `scripts/check-vault-wasm.mjs` to resolve paths from `import.meta.url`, inspect the real cargo-odra artifact at `contracts/policy-vault/wasm/PolicyVault.wasm`, require a plausible size range (`50_000 <= size <= 1_200_000`), and verify the WASM magic bytes (`00 61 73 6d`).
 
 - [ ] **Step 2: Run the check (expect failure)**
 
-Run: `node scripts/check-vault-wasm.mjs`
-Expected: FAIL — wasm not built.
-
-- [ ] **Step 3: Write minimal implementation**
-
-`contracts/policy-vault/bin/policy_vault.rs`:
-```rust
-#![no_main]
-#![no_std]
-extern crate alloc;
-
-#[cfg(target_arch = "wasm32")]
-odra::casper_contract::no_std_helpers!();
-
-#[cfg(target_arch = "wasm32")]
-#[no_mangle]
-pub extern "C" fn call() {
-    odra::host_functions::init_dispatcher::<policy_vault::vault::PolicyVault>();
-}
+Temporarily remove or rename the ignored generated artifact, then run:
+```bash
+node scripts/check-vault-wasm.mjs
 ```
+Expected: FAIL — `contracts/policy-vault/wasm/PolicyVault.wasm` is missing. Do not commit generated artifact removal.
 
-Append to `contracts/policy-vault/Cargo.toml`:
-```toml
-[[bin]]
-name = "policy_vault"
-path = "bin/policy_vault.rs"
-required-features = ["wasm"]
-
-[features]
-wasm = []
-```
-
-- [ ] **Step 4: Build and verify**
+- [ ] **Step 3: Build with cargo-odra and verify smoke check**
 
 Run:
 ```bash
-cargo build -p policy_vault --release --target wasm32-unknown-unknown --features wasm
+node scripts/check-cargo.mjs
 node scripts/check-vault-wasm.mjs
 ```
-Expected: prints `ok size=...`.
+Expected: `cargo odra test -b casper` and `cargo odra build` pass, `cargo odra build` emits `contracts/policy-vault/wasm/PolicyVault.wasm`, and the smoke check prints `ok size=...`.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Wire smoke check into the standard cargo gate**
 
+Update `scripts/check-cargo.mjs` so that after `cargo odra build` succeeds, it runs `node ../../scripts/check-vault-wasm.mjs` from the existing contract cwd. CI should fail if the cargo-odra PolicyVault WASM is missing, implausibly small/large, or not a WASM artifact.
+
+- [ ] **Step 5: Verify and commit**
+
+Run the P1.5 verification commands, then commit only the smoke gate and plan update:
 ```bash
-git add contracts/policy-vault/bin contracts/policy-vault/Cargo.toml scripts/check-vault-wasm.mjs
-git commit -m "feat(policy_vault): build WASM artifact"
+git add scripts/check-vault-wasm.mjs scripts/check-cargo.mjs docs/superpowers/plans/2026-06-05-caspilot-implementation.md
+git commit -m "test(policy-vault): add WASM artifact smoke check"
 ```
 
 ---

@@ -15,6 +15,7 @@ const options = {
 try {
   execSync('cargo odra test -b casper', options);
   execSync('cargo odra build', options);
+  execSync('node ../../scripts/check-vault-wasm.mjs', options);
 } catch {
   console.error('cargo-odra policy_vault check failed');
   process.exit(1);
