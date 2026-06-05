@@ -52,6 +52,9 @@ impl PolicyVault {
         daily_limit: U256,
         valid_until_ms: u64,
     ) {
+        self.validate_limits(max_single, daily_limit);
+        self.validate_future_valid_until(valid_until_ms);
+
         let owner = self.env().caller();
         self.owner.set(owner);
         self.token_package.set(token_package);
@@ -68,19 +71,56 @@ impl PolicyVault {
         });
     }
 
-    pub fn allow_agent(&mut self, _agent: Address) {}
+    pub fn allow_agent(&mut self, agent: Address) {
+        self.require_owner();
+        self.agents.set(&agent, true);
+        self.env().emit_event(AgentAllowed { agent });
+    }
 
-    pub fn revoke_agent(&mut self, _agent: Address) {}
+    pub fn revoke_agent(&mut self, agent: Address) {
+        self.require_owner();
+        self.agents.set(&agent, false);
+        self.env().emit_event(AgentRevoked { agent });
+    }
 
-    pub fn allow_receiver(&mut self, _receiver: Address) {}
+    pub fn allow_receiver(&mut self, receiver: Address) {
+        self.require_owner();
+        self.receivers.set(&receiver, true);
+        self.env().emit_event(ReceiverAllowed { receiver });
+    }
 
-    pub fn revoke_receiver(&mut self, _receiver: Address) {}
+    pub fn revoke_receiver(&mut self, receiver: Address) {
+        self.require_owner();
+        self.receivers.set(&receiver, false);
+        self.env().emit_event(ReceiverRevoked { receiver });
+    }
 
-    pub fn set_limits(&mut self, _max_single: U256, _daily_limit: U256) {}
+    pub fn set_limits(&mut self, max_single: U256, daily_limit: U256) {
+        self.require_owner();
+        self.validate_limits(max_single, daily_limit);
+        self.max_single.set(max_single);
+        self.daily_limit.set(daily_limit);
+        self.env().emit_event(LimitsUpdated {
+            max_single,
+            daily_limit,
+        });
+    }
 
-    pub fn set_valid_until(&mut self, _new_valid_until_ms: u64) {}
+    pub fn set_valid_until(&mut self, new_valid_until_ms: u64) {
+        self.require_owner();
+        self.validate_future_valid_until(new_valid_until_ms);
+        self.valid_until_ms.set(new_valid_until_ms);
+        self.env().emit_event(ValidUntilSet {
+            valid_until_ms: new_valid_until_ms,
+        });
+    }
 
-    pub fn expire_now(&mut self) {}
+    pub fn expire_now(&mut self) {
+        self.require_owner();
+        let now_ms = self.current_time_ms();
+        self.valid_until_ms.set(now_ms);
+        self.env().emit_event(Expired {});
+    }
 
     pub fn pay(&mut self, _receiver: Address, _amount: U256, _payload_hash: [u8; 32]) {}
 
@@ -122,5 +162,27 @@ impl PolicyVault {
 
     pub fn is_payload_used(&self, payload_hash: [u8; 32]) -> bool {
         self.used_payload_hashes.get_or_default(&payload_hash)
+    }
+
+    fn require_owner(&self) {
+        if self.env().caller() != self.owner.get_or_revert_with(PolicyVaultError::NotOwner) {
+            self.revert(PolicyVaultError::NotOwner);
+        }
+    }
+
+    fn current_time_ms(&self) -> u64 {
+        self.env().get_block_time_millis()
+    }
+
+    fn validate_limits(&self, max_single: U256, daily_limit: U256) {
+        if max_single.is_zero() || daily_limit.is_zero() || max_single > daily_limit {
+            self.revert(PolicyVaultError::AmountAboveMax);
+        }
+    }
+
+    fn validate_future_valid_until(&self, valid_until_ms: u64) {
+        if valid_until_ms <= self.current_time_ms() {
+            self.revert(PolicyVaultError::InvalidValidUntil);
+        }
     }
 }
