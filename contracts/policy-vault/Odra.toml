@@ -1,2 +1,5 @@
 [[contracts]]
 fqn = "PolicyVault"
+
+[[contracts]]
+fqn = "Cep18"

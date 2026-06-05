@@ -3,6 +3,7 @@
 #![cfg_attr(target_arch = "wasm32", no_main)]
 #![allow(unused_imports, clippy::single_component_path_imports)]
 
+use odra_modules;
 use policy_vault;
 
 #[cfg(not(target_arch = "wasm32"))]

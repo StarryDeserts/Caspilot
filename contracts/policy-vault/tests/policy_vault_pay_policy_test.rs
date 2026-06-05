@@ -1,6 +1,8 @@
 use odra::casper_types::U256;
-use odra::host::Deployer;
-use odra::prelude::OdraResult;
+use odra::host::{Deployer, HostRef};
+use odra::prelude::{Address, OdraResult};
+use odra_modules::cep18::utils::Cep18Modality;
+use odra_modules::cep18_token::{Cep18, Cep18HostRef, Cep18InitArgs};
 use policy_vault::errors::PolicyVaultError;
 use policy_vault::events::Paid;
 use policy_vault::{PolicyVault, PolicyVaultInitArgs};
@@ -12,20 +14,42 @@ fn u256(value: u64) -> U256 {
     U256::from(value)
 }
 
+fn address_of<T: HostRef>(contract: &T) -> Address {
+    *contract.address()
+}
+
+fn deploy_token(env: &odra::host::HostEnv, initial_supply: U256) -> Cep18HostRef {
+    Cep18::deploy(
+        env,
+        Cep18InitArgs {
+            symbol: "CAS".to_string(),
+            name: "Caspilot Token".to_string(),
+            decimals: 6,
+            initial_supply,
+            admin_list: vec![],
+            minter_list: vec![],
+            modality: Some(Cep18Modality::None),
+        },
+    )
+}
+
 fn deploy_vault_with_limits(
     env: &odra::host::HostEnv,
     max_single: U256,
     daily_limit: U256,
 ) -> policy_vault::PolicyVaultHostRef {
-    PolicyVault::deploy(
+    let mut token = deploy_token(env, U256::MAX);
+    let vault = PolicyVault::deploy(
         env,
         PolicyVaultInitArgs {
-            token_package: env.get_account(1),
+            token_package: address_of(&token),
             max_single,
             daily_limit,
             valid_until_ms: FUTURE_MS,
         },
-    )
+    );
+    token.transfer(vault.address(), &U256::MAX);
+    vault
 }
 
 fn deploy_configured_vault(env: &odra::host::HostEnv) -> policy_vault::PolicyVaultHostRef {

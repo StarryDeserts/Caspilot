@@ -2,6 +2,7 @@
 #![allow(unexpected_cfgs, unused_imports)]
 #![allow(clippy::single_component_path_imports)]
 
+use odra_modules;
 use policy_vault;
 
 #[cfg(all(not(odra_module = ""), not(target_arch = "wasm32")))]

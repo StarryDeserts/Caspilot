@@ -1,5 +1,8 @@
 use odra::casper_types::U256;
-use odra::host::Deployer;
+use odra::host::{Deployer, HostRef};
+use odra::prelude::Address;
+use odra_modules::cep18::utils::Cep18Modality;
+use odra_modules::cep18_token::{Cep18, Cep18HostRef, Cep18InitArgs};
 use policy_vault::errors::PolicyVaultError;
 use policy_vault::events::{
     AgentAllowed, AgentRevoked, Expired, LimitsUpdated, Paid, ReceiverAllowed, ReceiverRevoked,
@@ -9,6 +12,25 @@ use policy_vault::{PolicyVault, PolicyVaultInitArgs};
 
 fn u256(value: u64) -> U256 {
     U256::from(value)
+}
+
+fn address_of<T: HostRef>(contract: &T) -> Address {
+    *contract.address()
+}
+
+fn deploy_token(env: &odra::host::HostEnv, initial_supply: U256) -> Cep18HostRef {
+    Cep18::deploy(
+        env,
+        Cep18InitArgs {
+            symbol: "CAS".to_string(),
+            name: "Caspilot Token".to_string(),
+            decimals: 6,
+            initial_supply,
+            admin_list: vec![],
+            minter_list: vec![],
+            modality: Some(Cep18Modality::None),
+        },
+    )
 }
 
 #[test]
@@ -112,20 +134,21 @@ fn event_structs_construct_with_expected_public_field_types() {
 fn admin_and_pay_signatures_are_callable_with_valid_policy_setup() {
     let env = odra_test::env();
     let owner = env.get_account(0);
-    let token_package = env.get_account(1);
+    let mut token = deploy_token(&env, u256(10));
     let agent = env.get_account(2);
     let receiver = env.get_account(3);
 
     let mut vault = PolicyVault::deploy(
         &env,
         PolicyVaultInitArgs {
-            token_package,
+            token_package: address_of(&token),
             max_single: u256(1),
             daily_limit: u256(2),
             valid_until_ms: 3,
         },
     );
 
+    token.transfer(vault.address(), &u256(1));
     vault.allow_agent(agent);
     vault.allow_receiver(receiver);
     env.set_caller(agent);

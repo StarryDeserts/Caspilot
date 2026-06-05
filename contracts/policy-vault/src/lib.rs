@@ -5,6 +5,8 @@ extern crate alloc;
 
 use odra::casper_types::U256;
 use odra::prelude::*;
+use odra::ContractRef;
+use odra_modules::cep18_token::Cep18ContractRef;
 
 pub mod errors;
 pub mod events;
@@ -155,11 +157,14 @@ impl PolicyVault {
         if self.used_payload_hashes.get_or_default(&payload_hash) {
             self.revert(PolicyVaultError::NonceAlreadyUsed);
         }
-
-        self.execute_token_transfer(receiver, amount);
         let Some(paid_total_after) = self.paid_total.get_or_default().checked_add(amount) else {
             self.revert(PolicyVaultError::ArithmeticOverflow);
         };
+        if self.token_balance() < amount {
+            self.revert(PolicyVaultError::InsufficientVaultBalance);
+        }
+
+        self.execute_token_transfer(receiver, amount);
 
         self.day_index.set(new_day);
         self.day_spend.set(new_day_spend);
@@ -236,5 +241,15 @@ impl PolicyVault {
         }
     }
 
-    fn execute_token_transfer(&mut self, _receiver: Address, _amount: U256) {}
+    fn token_balance(&self) -> U256 {
+        let token_address = self.get_token_package();
+        let token = Cep18ContractRef::new(self.env(), token_address);
+        token.balance_of(&self.env().self_address())
+    }
+
+    fn execute_token_transfer(&mut self, receiver: Address, amount: U256) {
+        let token_address = self.get_token_package();
+        let mut token = Cep18ContractRef::new(self.env(), token_address);
+        token.transfer(&receiver, &amount);
+    }
 }

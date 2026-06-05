@@ -16,6 +16,7 @@ odra-casper-wasm-env = { workspace = true }
 odra-build = { workspace = true }
 odra-core = { workspace = true }
 odra-macros = { workspace = true }
+odra-modules = { workspace = true }
 
 [dev-dependencies]
 odra-casper-test-vm = { workspace = true }
