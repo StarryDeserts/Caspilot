@@ -364,116 +364,19 @@ git commit -m "chore: add @caspilot/core sanity package with vitest"
 
 ---
 
-### Task 0.4: Cargo workspace skeleton + Odra dependency
+### Task 0.4: Cargo workspace skeleton + Odra dependency — DEFERRED to P1 Task 1.0
 
-**Files:**
-- Create: `Cargo.toml` (root)
-- Create: `contracts/policy_vault/Cargo.toml`
-- Create: `contracts/policy_vault/src/lib.rs`
-- Create: `rust-toolchain.toml`
+This task is intentionally **not executed in P0**. Multiple bootstrap attempts during P0 surfaced a structural mismatch between Odra 2.x and a plain `cargo check`-driven workflow:
 
-- [ ] **Step 1: Write the failing test**
+- `odra-macros` uses `#![feature(box_patterns, result_flattening)]`, which are nightly-only. No stable Rust toolchain compiles Odra 2.x.
+- Odra's officially-supported nightly is `nightly-2024-07-31`. The cargo bundled with that nightly cannot parse newer registry crates that use the `edition2024` manifest feature (e.g. `base64ct 1.8.x`).
+- Pinning `base64ct = "=1.7.3"` works around the registry mismatch, but a raw `cargo check` against a `cdylib + rlib` Odra crate without a `global_allocator` / `panic_handler` on the host target still fails.
+- The supported primitive for Odra is the `cargo-odra` CLI (`odra build`, `odra test`), which wires up the right runtime crate, build harness, and feature flags. Driving Odra from raw `cargo` fights the framework.
 
-Create `scripts/check-cargo.mjs`:
-```js
-import { execSync } from 'node:child_process';
-try {
-  execSync('cargo check --workspace --all-targets', { stdio: 'inherit' });
-} catch {
-  process.exit(1);
-}
-```
-
-- [ ] **Step 2: Run check (expect failure)**
-
-Run: `node scripts/check-cargo.mjs`
-Expected: FAIL — no `Cargo.toml` exists.
-
-- [ ] **Step 3: Write minimal implementation**
-
-`rust-toolchain.toml`:
-```toml
-[toolchain]
-channel = "1.81.0"
-components = ["rustfmt", "clippy"]
-targets = ["wasm32-unknown-unknown"]
-```
-
-`Cargo.toml`:
-```toml
-[workspace]
-resolver = "2"
-members = ["contracts/*"]
-
-[workspace.package]
-version = "0.0.0"
-edition = "2021"
-rust-version = "1.81"
-license = "Apache-2.0"
-
-[workspace.dependencies]
-odra = { version = "2.0.0", default-features = false }
-odra-modules = { version = "2.0.0", default-features = false }
-
-[profile.release]
-codegen-units = 1
-lto = true
-opt-level = "z"
-```
-
-`contracts/policy_vault/Cargo.toml`:
-```toml
-[package]
-name = "policy_vault"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-odra = { workspace = true }
-odra-modules = { workspace = true }
-
-[features]
-default = []
-```
-
-`contracts/policy_vault/src/lib.rs`:
-```rust
-#![cfg_attr(not(test), no_std)]
-extern crate alloc;
-
-pub mod errors;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn sanity() {
-        assert_eq!(2 + 2, 4);
-    }
-}
-```
-
-`contracts/policy_vault/src/errors.rs`:
-```rust
-// PolicyVault error variants are defined in P1 Task 1.1.
-// This stub keeps the crate compilable so P0 CI passes.
-```
-
-- [ ] **Step 4: Verify**
-
-Run: `cargo check --workspace --all-targets`
-Expected: compiles cleanly. (If Odra registry resolution fails offline, document in README that `cargo fetch` is required during initial setup.)
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add Cargo.toml rust-toolchain.toml contracts/policy_vault scripts/check-cargo.mjs
-git commit -m "chore: bootstrap cargo workspace and policy_vault crate"
-```
+**Effect:**
+- P0 ships TypeScript-only. No `Cargo.toml`, no `rust-toolchain.toml`, no `contracts/` directory, no `cargo_check` CI job lands in P0.
+- All Cargo / Rust bootstrap moves to P1 Task 1.0, which installs `cargo-odra` and uses `odra build` / `odra test`. Task 0.6 (CI) is adjusted accordingly: the `cargo_check` job is added in P1 Task 1.0, not P0.
+- See the `## Open follow-ups` section for the consolidated decision record.
 
 ---
 
@@ -549,7 +452,9 @@ git commit -m "chore: add biome formatter + lint config"
 
 ---
 
-### Task 0.6: CI skeleton (typecheck + test + cargo check + format:check)
+### Task 0.6: CI skeleton (typecheck + test + format:check)
+
+> **Note:** The `cargo_check` CI job is intentionally absent here. It is added in P1 Task 1.0 alongside the Cargo workspace bootstrap. See Task 0.4 (DEFERRED) for the rationale.
 
 **Files:**
 - Create: `.github/workflows/ci.yml`
@@ -562,7 +467,7 @@ import fs from 'node:fs';
 import yaml from 'js-yaml';
 const ci = yaml.load(fs.readFileSync('.github/workflows/ci.yml', 'utf8'));
 const jobs = Object.keys(ci.jobs ?? {});
-const required = ['typecheck', 'test', 'cargo_check', 'format_check'];
+const required = ['typecheck', 'test', 'format_check'];
 const missing = required.filter((j) => !jobs.includes(j));
 if (missing.length) {
   console.error('missing CI jobs:', missing);
@@ -618,17 +523,6 @@ jobs:
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
-
-  cargo_check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with: { toolchain: '1.81.0', targets: 'wasm32-unknown-unknown', components: 'rustfmt,clippy' }
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo check --workspace --all-targets
-      - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo fmt --all -- --check
 ```
 
 - [ ] **Step 4: Verify**
@@ -640,12 +534,169 @@ Expected: all green locally.
 
 ```bash
 git add .github/workflows/ci.yml scripts/check-ci.mjs
-git commit -m "ci: add typecheck/test/cargo/format jobs"
+git commit -m "ci: add typecheck/test/format jobs"
 ```
 
 ---
 
 ## Phase 1 — PolicyVault Odra contract
+
+> **Phase note (cargo-odra workflow):** P0 deferred the Cargo bootstrap (see Task 0.4). Task 1.0 below brings the Rust side of the repo online using Odra's documented CLI. All subsequent P1 tasks (1.1+) that show `cargo test -p policy_vault …` or `cargo build …` commands should be run as `cargo odra test …` / `cargo odra build …` once Task 1.0 completes. Treat the `cargo →  cargo odra` swap as the only difference; the test expectations are unchanged.
+
+### Task 1.0: Cargo workspace bootstrap via `cargo-odra`
+
+**Files:**
+- Create: `Cargo.toml` (root)
+- Create: `rust-toolchain.toml`
+- Create: `contracts/policy_vault/Cargo.toml`
+- Create: `contracts/policy_vault/src/lib.rs`
+- Create: `contracts/policy_vault/src/errors.rs` (stub — filled in Task 1.1)
+- Create: `scripts/check-cargo.mjs`
+- Modify: `scripts/check-ci.mjs` (re-add `cargo_check` to `required`)
+- Modify: `.github/workflows/ci.yml` (append `cargo_check` job)
+- Modify: `README.md` (note `cargo install cargo-odra --locked` as a one-time setup)
+
+**Context:** P0 Task 0.4 was deferred because Odra 2.x is fundamentally a nightly-Rust framework requiring its own build CLI. This task uses Odra's officially-supported workflow.
+
+- [ ] **Step 1: Install `cargo-odra` CLI (one-time, local + CI)**
+
+Run locally:
+```bash
+cargo install cargo-odra --locked
+```
+
+Record the resolved version in `README.md` under a "Toolchain" section so future contributors can reproduce the build. If a specific minor version is required by Odra 2.0.0, pin it (e.g., `cargo install cargo-odra@<x.y.z> --locked`).
+
+- [ ] **Step 2: Write the failing test**
+
+Create `scripts/check-cargo.mjs`:
+```js
+import { execSync } from 'node:child_process';
+try {
+  execSync('cargo odra build -p policy_vault', { stdio: 'inherit' });
+} catch {
+  console.error('cargo odra build -p policy_vault failed');
+  process.exit(1);
+}
+```
+
+- [ ] **Step 3: Run check (expect failure)**
+
+Run: `node scripts/check-cargo.mjs`
+Expected: FAIL — no `Cargo.toml` exists.
+
+- [ ] **Step 4: Write minimal implementation**
+
+`rust-toolchain.toml`:
+```toml
+[toolchain]
+channel = "nightly-2024-07-31"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]
+```
+
+`Cargo.toml` (root):
+```toml
+[workspace]
+resolver = "2"
+members = ["contracts/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+odra = { version = "2.0.0", default-features = false }
+odra-modules = { version = "2.0.0", default-features = false }
+# Pinned because base64ct 1.8.x manifest uses `edition2024`, which the
+# nightly-2024-07-31 cargo (Odra's officially-supported toolchain) cannot
+# parse. 1.7.3 is the last edition2021 release. Re-evaluate when Odra
+# bumps its nightly pin.
+base64ct = "=1.7.3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+```
+
+`contracts/policy_vault/Cargo.toml`:
+```toml
+[package]
+name = "policy_vault"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+odra = { workspace = true }
+odra-modules = { workspace = true }
+
+[features]
+default = []
+```
+
+`contracts/policy_vault/src/lib.rs`:
+```rust
+#![cfg_attr(not(test), no_std)]
+extern crate alloc;
+
+pub mod errors;
+```
+
+`contracts/policy_vault/src/errors.rs`:
+```rust
+// PolicyVault error variants are defined in Task 1.1.
+```
+
+If `cargo-odra` requires additional `[package.metadata.odra]` configuration, follow Odra 2.x docs to add the minimal block. Record any non-obvious required fields under the `## Open follow-ups` section of this plan so reviewers can audit them.
+
+- [ ] **Step 5: Verify**
+
+Run: `node scripts/check-cargo.mjs`
+Expected: PASS — `cargo odra build -p policy_vault` produces a WASM artifact under Odra's output directory.
+
+- [ ] **Step 6: Re-enable CI `cargo_check` job**
+
+Modify `scripts/check-ci.mjs` — add `'cargo_check'` back to the `required` array:
+```js
+const required = ['typecheck', 'test', 'cargo_check', 'format_check'];
+```
+
+Append to `.github/workflows/ci.yml`:
+```yaml
+  cargo_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: 'nightly-2024-07-31', targets: 'wasm32-unknown-unknown', components: 'rustfmt,clippy' }
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install cargo-odra --locked
+      - run: cargo odra build -p policy_vault
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo fmt --all -- --check
+```
+
+- [ ] **Step 7: Verify CI locally**
+
+Run: `node scripts/check-ci.mjs && node scripts/check-cargo.mjs`
+Expected: both PASS.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add Cargo.toml rust-toolchain.toml contracts/policy_vault \
+        scripts/check-cargo.mjs scripts/check-ci.mjs \
+        .github/workflows/ci.yml README.md
+git commit -m "chore(p1): bootstrap cargo workspace via cargo-odra"
+```
+
+---
 
 ### Task 1.1: PolicyVaultError enum
 
@@ -9466,6 +9517,7 @@ These are deliberately deferred items. Each gets a tracking issue at the start o
 - **CSPR.cloud proxy hardening.** Document exact read-only methods used by the browser; add a backend allowlist for CSPR.cloud paths the API may proxy. Owner: P5 + audit-trace.
 - **Real RPC adapter for harness.** `scripts/run-tier1.ts` and `scripts/deploy-vault.ts` currently fail in real mode with an explicit "wire @caspilot/adapters" error. Wire them through `@caspilot/adapters.casperRpc` once the adapter is integration-tested against testnet. Owner: P6, after P4 adapters land.
 - **CSPR.click SDK pinning.** `ClickWallet` accepts any `ClickProvider`-shaped object. Pin to the SDK version actually used in the demo and add a runtime version assertion. Owner: P5.
+- **2026-06-05 — Cargo bootstrap deferral.** P0 Task 0.4 was moved to P1 Task 1.0 after stable Rust toolchains proved incompatible with Odra 2.0.0 (odra-macros uses nightly-only feature gates). The plan now pins `nightly-2024-07-31` (Odra's officially-supported nightly), uses the `cargo-odra` CLI (`odra build` / `odra test`) instead of raw `cargo check`, and pins `base64ct = "=1.7.3"` (newer 1.8.x lines use `edition2024` manifests the pinned nightly cannot parse). Re-evaluate the toolchain pin and base64ct pin together whenever Odra publishes a bumped `rust-toolchain` file. Owner: P1 Task 1.0.
 
 ## Out of scope (for this plan)
 
