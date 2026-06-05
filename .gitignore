@@ -6,6 +6,7 @@ dist/
 .env.*
 !.env.example
 target/
+wasm/
 .cargo/
 .turbo/
 .DS_Store

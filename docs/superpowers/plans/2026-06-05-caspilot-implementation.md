@@ -541,20 +541,26 @@ git commit -m "ci: add typecheck/test/format jobs"
 
 ## Phase 1 — PolicyVault Odra contract
 
-> **Phase note (cargo-odra workflow):** P0 deferred the Cargo bootstrap (see Task 0.4). Task 1.0 below brings the Rust side of the repo online using Odra's documented CLI. All subsequent P1 tasks (1.1+) that show `cargo test -p policy_vault …` or `cargo build …` commands should be run as `cargo odra test …` / `cargo odra build …` once Task 1.0 completes. Treat the `cargo →  cargo odra` swap as the only difference; the test expectations are unchanged.
+> **Phase note (cargo-odra workflow):** P0 deferred the Cargo bootstrap (see Task 0.4). Task 1.0 below brings the Rust side of the repo online using Odra's CLI. For P1 tasks, default to `cargo odra test -b casper` for tests and `cargo odra build` for builds from `contracts/policy-vault/`; `cargo-odra 0.1.7` does not accept `-b` on `build`. Do not use plain `cargo test` as the default unless a specific test is known to work under plain Cargo and that exception is documented.
 
 ### Task 1.0: Cargo workspace bootstrap via `cargo-odra`
 
 **Files:**
 - Create: `Cargo.toml` (root)
 - Create: `rust-toolchain.toml`
-- Create: `contracts/policy_vault/Cargo.toml`
-- Create: `contracts/policy_vault/src/lib.rs`
-- Create: `contracts/policy_vault/src/errors.rs` (stub — filled in Task 1.1)
+- Create: `contracts/policy-vault/Cargo.toml`
+- Create: `contracts/policy-vault/Odra.toml`
+- Create: `contracts/policy-vault/build.rs`
+- Create: `contracts/policy-vault/bin/build_contract.rs`
+- Create: `contracts/policy-vault/bin/build_schema.rs`
+- Create: `contracts/policy-vault/src/lib.rs`
+- Create: `contracts/policy-vault/src/errors.rs` (stub — filled in Task 1.1)
 - Create: `scripts/check-cargo.mjs`
 - Modify: `scripts/check-ci.mjs` (re-add `cargo_check` to `required`)
 - Modify: `.github/workflows/ci.yml` (append `cargo_check` job)
-- Modify: `README.md` (note `cargo install cargo-odra --locked` as a one-time setup)
+- Modify: `.gitignore` (ignore generated cargo-odra `wasm/` output)
+- Modify: `package.json` / `pnpm-lock.yaml` (add local `binaryen` + `wabt` WASM tools)
+- Modify: `README.md` (note pinned `cargo-odra` install command and local checks)
 
 **Context:** P0 Task 0.4 was deferred because Odra 2.x is fundamentally a nightly-Rust framework requiring its own build CLI. This task uses Odra's officially-supported workflow.
 
@@ -562,20 +568,34 @@ git commit -m "ci: add typecheck/test/format jobs"
 
 Run locally:
 ```bash
-cargo install cargo-odra --locked
+cargo install cargo-odra@0.1.7 --locked --features cargo-generate/vendored-openssl
 ```
 
-Record the resolved version in `README.md` under a "Toolchain" section so future contributors can reproduce the build. If a specific minor version is required by Odra 2.0.0, pin it (e.g., `cargo install cargo-odra@<x.y.z> --locked`).
+Record the resolved version in `README.md` under a "Toolchain" section so future contributors can reproduce the build. The vendored OpenSSL feature keeps `cargo-odra` installable in environments without system `pkg-config`/OpenSSL development headers. The Odra check also needs `wasm-opt` and `wasm-strip`; this repo provides them through workspace dev dependencies `binaryen` and `wabt`, so `scripts/check-cargo.mjs` prepends `node_modules/.bin` to `PATH`.
 
 - [ ] **Step 2: Write the failing test**
 
 Create `scripts/check-cargo.mjs`:
 ```js
 import { execSync } from 'node:child_process';
+
+const contractDir = new URL('../contracts/policy-vault/', import.meta.url);
+const binDir = new URL('../node_modules/.bin/', import.meta.url);
+const options = {
+  cwd: contractDir,
+  env: {
+    ...process.env,
+    CARGO_TARGET_DIR: 'target',
+    PATH: `${binDir.pathname}:${process.env.PATH ?? ''}`
+  },
+  stdio: 'inherit'
+};
+
 try {
-  execSync('cargo odra build -p policy_vault', { stdio: 'inherit' });
+  execSync('cargo odra test -b casper', options);
+  execSync('cargo odra build', options);
 } catch {
-  console.error('cargo odra build -p policy_vault failed');
+  console.error('cargo-odra policy_vault check failed');
   process.exit(1);
 }
 ```
@@ -598,67 +618,79 @@ targets = ["wasm32-unknown-unknown"]
 `Cargo.toml` (root):
 ```toml
 [workspace]
+members = ["contracts/policy-vault"]
 resolver = "2"
-members = ["contracts/*"]
-
-[workspace.package]
-version = "0.0.0"
-edition = "2021"
-license = "Apache-2.0"
 
 [workspace.dependencies]
-odra = { version = "2.0.0", default-features = false }
-odra-modules = { version = "2.0.0", default-features = false }
-# Pinned because base64ct 1.8.x manifest uses `edition2024`, which the
-# nightly-2024-07-31 cargo (Odra's officially-supported toolchain) cannot
-# parse. 1.7.3 is the last edition2021 release. Re-evaluate when Odra
-# bumps its nightly pin.
+odra = { version = "=2.0.0", features = [], default-features = false }
+odra-build = { version = "=2.0.0", features = [], default-features = false }
+odra-casper-test-vm = { version = "=2.0.0", features = [], default-features = false }
+odra-casper-wasm-env = { version = "=2.0.0", features = [], default-features = false }
+odra-core = { version = "=2.0.0", features = [], default-features = false }
+odra-macros = { version = "=2.0.0", features = [], default-features = false }
+odra-test = { version = "=2.0.0", features = [], default-features = false }
+odra-vm = { version = "=2.0.0", features = [], default-features = false }
+# Pinned because newer registry releases use edition2024 manifests or rustc
+# versions unsupported by nightly-2024-07-31. Re-evaluate together with the
+# Odra nightly/tooling pin.
 base64ct = "=1.7.3"
+blake3 = "=1.8.2"
+clap = "=4.5.21"
+clap_builder = "=4.5.21"
+clap_lex = "=0.7.0"
+hashbrown = "=0.15.5"
+indexmap = "=2.11.4"
+proptest = "=1.9.0"
+tempfile = "=3.23.0"
 
 [profile.release]
 codegen-units = 1
 lto = true
-opt-level = "z"
+
+[profile.dev.package."*"]
+opt-level = 3
 ```
 
-`contracts/policy_vault/Cargo.toml`:
-```toml
-[package]
-name = "policy_vault"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
+`contracts/policy-vault/Cargo.toml` uses package name `policy_vault`, exact Odra workspace dependencies, `odra-build`, `odra-test`, and the generated-style build/schema bins required by cargo-odra 0.1.7. The minimal proven shape also includes:
 
-[lib]
-crate-type = ["cdylib", "rlib"]
+- `contracts/policy-vault/Odra.toml` with `[[contracts]] fqn = "PolicyVault"`
+- `contracts/policy-vault/build.rs` calling `odra_build::build()`
+- `contracts/policy-vault/bin/build_contract.rs`
+- `contracts/policy-vault/bin/build_schema.rs`
 
-[dependencies]
-odra = { workspace = true }
-odra-modules = { workspace = true }
+Do not add `odra-modules` in Task 1.0 unless the stub actually uses it; Task 1.9 can add it when CEP-18 transfer work starts.
 
-[features]
-default = []
-```
-
-`contracts/policy_vault/src/lib.rs`:
+`contracts/policy-vault/src/lib.rs`:
 ```rust
 #![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(test), no_main)]
+
 extern crate alloc;
 
+use odra::prelude::*;
+
 pub mod errors;
+
+#[odra::module]
+pub struct PolicyVault;
+
+#[odra::module]
+impl PolicyVault {
+    pub fn init(&mut self) {}
+}
 ```
 
-`contracts/policy_vault/src/errors.rs`:
+`contracts/policy-vault/src/errors.rs`:
 ```rust
 // PolicyVault error variants are defined in Task 1.1.
 ```
 
-If `cargo-odra` requires additional `[package.metadata.odra]` configuration, follow Odra 2.x docs to add the minimal block. Record any non-obvious required fields under the `## Open follow-ups` section of this plan so reviewers can audit them.
+No `[package.metadata.odra]` block is used. The actual cargo-odra 0.1.7 project metadata is `Odra.toml` plus the build/schema bins above. Record any future metadata/config changes under the `## Open follow-ups` section of this plan so reviewers can audit them.
 
 - [ ] **Step 5: Verify**
 
 Run: `node scripts/check-cargo.mjs`
-Expected: PASS — `cargo odra build -p policy_vault` produces a WASM artifact under Odra's output directory.
+Expected: PASS — `cargo odra test -b casper` and `cargo odra build` pass from `contracts/policy-vault/`, producing `contracts/policy-vault/wasm/PolicyVault.wasm` as a generated artifact (ignored by git).
 
 - [ ] **Step 6: Re-enable CI `cargo_check` job**
 
@@ -673,14 +705,20 @@ Append to `.github/workflows/ci.yml`:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
       - uses: dtolnay/rust-toolchain@master
         with: { toolchain: 'nightly-2024-07-31', targets: 'wasm32-unknown-unknown', components: 'rustfmt,clippy' }
       - uses: Swatinem/rust-cache@v2
-      - run: cargo install cargo-odra --locked
-      - run: cargo odra build -p policy_vault
-      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo install cargo-odra@0.1.7 --locked --features cargo-generate/vendored-openssl
+      - run: node scripts/check-cargo.mjs
       - run: cargo fmt --all -- --check
 ```
+
+Clippy is deferred in Task 1.0 because the hard gate is the cargo-odra Casper build/test workflow; add clippy later only after confirming Odra-generated/tooling code is compatible.
 
 - [ ] **Step 7: Verify CI locally**
 
@@ -690,10 +728,10 @@ Expected: both PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add Cargo.toml rust-toolchain.toml contracts/policy_vault \
-        scripts/check-cargo.mjs scripts/check-ci.mjs \
-        .github/workflows/ci.yml README.md
-git commit -m "chore(p1): bootstrap cargo workspace via cargo-odra"
+git add Cargo.toml Cargo.lock rust-toolchain.toml .gitignore package.json pnpm-lock.yaml \
+        contracts/policy-vault scripts/check-cargo.mjs scripts/check-ci.mjs \
+        .github/workflows/ci.yml README.md docs/superpowers/plans/2026-06-05-caspilot-implementation.md
+git commit -m "chore(p1): bootstrap Odra policy vault workspace"
 ```
 
 ---
@@ -701,12 +739,12 @@ git commit -m "chore(p1): bootstrap cargo workspace via cargo-odra"
 ### Task 1.1: PolicyVaultError enum
 
 **Files:**
-- Modify: `contracts/policy_vault/src/errors.rs`
-- Create: `contracts/policy_vault/tests/errors_test.rs`
+- Modify: `contracts/policy-vault/src/errors.rs`
+- Create: `contracts/policy-vault/tests/errors_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/errors_test.rs`:
+`contracts/policy-vault/tests/errors_test.rs`:
 ```rust
 use policy_vault::errors::PolicyVaultError;
 
@@ -728,12 +766,12 @@ fn error_discriminants_are_stable() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault errors_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper errors_test`
 Expected: FAIL — `PolicyVaultError` not defined.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`contracts/policy_vault/src/errors.rs`:
+`contracts/policy-vault/src/errors.rs`:
 ```rust
 use odra::OdraError;
 
@@ -761,13 +799,13 @@ impl From<PolicyVaultError> for OdraError {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault errors_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper errors_test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/errors.rs contracts/policy_vault/tests/errors_test.rs
+git add contracts/policy-vault/src/errors.rs contracts/policy-vault/tests/errors_test.rs
 git commit -m "feat(policy_vault): add stable error discriminants"
 ```
 
@@ -776,13 +814,13 @@ git commit -m "feat(policy_vault): add stable error discriminants"
 ### Task 1.2: Events module (9 events)
 
 **Files:**
-- Create: `contracts/policy_vault/src/events.rs`
-- Modify: `contracts/policy_vault/src/lib.rs` — `pub mod events;`
-- Create: `contracts/policy_vault/tests/events_test.rs`
+- Create: `contracts/policy-vault/src/events.rs`
+- Modify: `contracts/policy-vault/src/lib.rs` — `pub mod events;`
+- Create: `contracts/policy-vault/tests/events_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/events_test.rs`:
+`contracts/policy-vault/tests/events_test.rs`:
 ```rust
 use policy_vault::events::{
     AdminRotated, AgentAdded, AgentRemoved, ConfigUpdated, Initialized, Paid,
@@ -816,12 +854,12 @@ fn events_construct_with_expected_fields() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault events_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper events_test`
 Expected: FAIL — events module not declared.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`contracts/policy_vault/src/events.rs`:
+`contracts/policy-vault/src/events.rs`:
 ```rust
 use odra::casper_types::U256;
 use odra::Address;
@@ -874,20 +912,20 @@ pub struct Paid {
 }
 ```
 
-Add to `contracts/policy_vault/src/lib.rs`:
+Add to `contracts/policy-vault/src/lib.rs`:
 ```rust
 pub mod events;
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault events_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper events_test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/events.rs contracts/policy_vault/src/lib.rs contracts/policy_vault/tests/events_test.rs
+git add contracts/policy-vault/src/events.rs contracts/policy-vault/src/lib.rs contracts/policy-vault/tests/events_test.rs
 git commit -m "feat(policy_vault): add 9 vault events"
 ```
 
@@ -896,13 +934,13 @@ git commit -m "feat(policy_vault): add 9 vault events"
 ### Task 1.3: PolicyVault storage + init()
 
 **Files:**
-- Create: `contracts/policy_vault/src/vault.rs`
-- Modify: `contracts/policy_vault/src/lib.rs` — `pub mod vault;`
-- Create: `contracts/policy_vault/tests/init_test.rs`
+- Create: `contracts/policy-vault/src/vault.rs`
+- Modify: `contracts/policy-vault/src/lib.rs` — `pub mod vault;`
+- Create: `contracts/policy-vault/tests/init_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/init_test.rs`:
+`contracts/policy-vault/tests/init_test.rs`:
 ```rust
 use odra::host::{Deployer, NoArgs};
 use policy_vault::vault::{PolicyVaultHostRef, PolicyVaultInitArgs};
@@ -932,12 +970,12 @@ fn init_sets_admin_and_token() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault init_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper init_test`
 Expected: FAIL — module/types missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`contracts/policy_vault/src/vault.rs`:
+`contracts/policy-vault/src/vault.rs`:
 ```rust
 use odra::casper_types::U256;
 use odra::prelude::*;
@@ -1015,12 +1053,12 @@ impl PolicyVault {
 }
 ```
 
-Add to `contracts/policy_vault/src/lib.rs`:
+Add to `contracts/policy-vault/src/lib.rs`:
 ```rust
 pub mod vault;
 ```
 
-Add dev-dependency to `contracts/policy_vault/Cargo.toml`:
+Add dev-dependency to `contracts/policy-vault/Cargo.toml`:
 ```toml
 [dev-dependencies]
 odra-test = "2.0.0"
@@ -1028,13 +1066,13 @@ odra-test = "2.0.0"
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault init_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper init_test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/src/lib.rs contracts/policy_vault/Cargo.toml contracts/policy_vault/tests/init_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/src/lib.rs contracts/policy-vault/Cargo.toml contracts/policy-vault/tests/init_test.rs
 git commit -m "feat(policy_vault): add storage layout and init()"
 ```
 
@@ -1043,12 +1081,12 @@ git commit -m "feat(policy_vault): add storage layout and init()"
 ### Task 1.4: Admin guard + pause/unpause
 
 **Files:**
-- Modify: `contracts/policy_vault/src/vault.rs`
-- Create: `contracts/policy_vault/tests/admin_test.rs`
+- Modify: `contracts/policy-vault/src/vault.rs`
+- Create: `contracts/policy-vault/tests/admin_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/admin_test.rs`:
+`contracts/policy-vault/tests/admin_test.rs`:
 ```rust
 use odra::host::Deployer;
 use policy_vault::vault::{PolicyVaultHostRef, PolicyVaultInitArgs};
@@ -1085,12 +1123,12 @@ fn pause_requires_admin() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault admin_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper admin_test`
 Expected: FAIL — `pause`/`unpause` not defined.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Append to `impl PolicyVault` block in `contracts/policy_vault/src/vault.rs`:
+Append to `impl PolicyVault` block in `contracts/policy-vault/src/vault.rs`:
 ```rust
     fn assert_admin(&self) {
         let caller = self.env().caller();
@@ -1114,13 +1152,13 @@ Append to `impl PolicyVault` block in `contracts/policy_vault/src/vault.rs`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault admin_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper admin_test`
 Expected: PASS (both branches).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/tests/admin_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/tests/admin_test.rs
 git commit -m "feat(policy_vault): admin guard + pause/unpause"
 ```
 
@@ -1129,12 +1167,12 @@ git commit -m "feat(policy_vault): admin guard + pause/unpause"
 ### Task 1.5: Allowlist management (agents + receivers)
 
 **Files:**
-- Modify: `contracts/policy_vault/src/vault.rs`
-- Create: `contracts/policy_vault/tests/allowlist_test.rs`
+- Modify: `contracts/policy-vault/src/vault.rs`
+- Create: `contracts/policy-vault/tests/allowlist_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/allowlist_test.rs`:
+`contracts/policy-vault/tests/allowlist_test.rs`:
 ```rust
 use odra::host::Deployer;
 use policy_vault::vault::{PolicyVaultHostRef, PolicyVaultInitArgs};
@@ -1173,7 +1211,7 @@ fn allowlist_add_and_remove() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault allowlist_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper allowlist_test`
 Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1215,13 +1253,13 @@ Append to `impl PolicyVault`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault allowlist_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper allowlist_test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/tests/allowlist_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/tests/allowlist_test.rs
 git commit -m "feat(policy_vault): allowlist add/remove for agents+receivers"
 ```
 
@@ -1230,12 +1268,12 @@ git commit -m "feat(policy_vault): allowlist add/remove for agents+receivers"
 ### Task 1.6: update_config (monotonic version)
 
 **Files:**
-- Modify: `contracts/policy_vault/src/vault.rs`
-- Create: `contracts/policy_vault/tests/config_test.rs`
+- Modify: `contracts/policy-vault/src/vault.rs`
+- Create: `contracts/policy-vault/tests/config_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/config_test.rs`:
+`contracts/policy-vault/tests/config_test.rs`:
 ```rust
 use odra::host::Deployer;
 use odra::casper_types::U256;
@@ -1271,7 +1309,7 @@ fn update_config_requires_strict_monotonic_version() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault config_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper config_test`
 Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1305,13 +1343,13 @@ Append to `impl PolicyVault`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault config_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper config_test`
 Expected: PASS (positive path + replay revert).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/tests/config_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/tests/config_test.rs
 git commit -m "feat(policy_vault): monotonic update_config"
 ```
 
@@ -1320,12 +1358,12 @@ git commit -m "feat(policy_vault): monotonic update_config"
 ### Task 1.7: rotate_admin
 
 **Files:**
-- Modify: `contracts/policy_vault/src/vault.rs`
-- Create: `contracts/policy_vault/tests/rotate_admin_test.rs`
+- Modify: `contracts/policy-vault/src/vault.rs`
+- Create: `contracts/policy-vault/tests/rotate_admin_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/rotate_admin_test.rs`:
+`contracts/policy-vault/tests/rotate_admin_test.rs`:
 ```rust
 use odra::host::Deployer;
 use policy_vault::vault::{PolicyVaultHostRef, PolicyVaultInitArgs};
@@ -1360,7 +1398,7 @@ fn rotate_admin_emits_and_switches_caller_check() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault rotate_admin_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper rotate_admin_test`
 Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1377,13 +1415,13 @@ Append to `impl PolicyVault`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault rotate_admin_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper rotate_admin_test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/tests/rotate_admin_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/tests/rotate_admin_test.rs
 git commit -m "feat(policy_vault): rotate_admin"
 ```
 
@@ -1392,12 +1430,12 @@ git commit -m "feat(policy_vault): rotate_admin"
 ### Task 1.8: Day rollover helper
 
 **Files:**
-- Modify: `contracts/policy_vault/src/vault.rs`
-- Create: `contracts/policy_vault/tests/day_rollover_test.rs`
+- Modify: `contracts/policy-vault/src/vault.rs`
+- Create: `contracts/policy-vault/tests/day_rollover_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/day_rollover_test.rs`:
+`contracts/policy-vault/tests/day_rollover_test.rs`:
 ```rust
 use policy_vault::vault::compute_day_index;
 
@@ -1412,7 +1450,7 @@ fn day_index_is_ms_div_86_400_000() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault day_rollover_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper day_rollover_test`
 Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1426,13 +1464,13 @@ pub fn compute_day_index(now_ms: u64) -> u64 {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault day_rollover_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper day_rollover_test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/tests/day_rollover_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/tests/day_rollover_test.rs
 git commit -m "feat(policy_vault): day index helper"
 ```
 
@@ -1441,12 +1479,12 @@ git commit -m "feat(policy_vault): day index helper"
 ### Task 1.9: pay() — pre-checks (pause + agent + receiver + expiry + nonce)
 
 **Files:**
-- Modify: `contracts/policy_vault/src/vault.rs`
-- Create: `contracts/policy_vault/tests/pay_prechecks_test.rs`
+- Modify: `contracts/policy-vault/src/vault.rs`
+- Create: `contracts/policy-vault/tests/pay_prechecks_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/pay_prechecks_test.rs`:
+`contracts/policy-vault/tests/pay_prechecks_test.rs`:
 ```rust
 use odra::casper_types::U256;
 use odra::host::Deployer;
@@ -1518,7 +1556,7 @@ fn pay_rejects_replayed_payload_hash() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault pay_prechecks_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper pay_prechecks_test`
 Expected: FAIL — `pay` missing.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1556,13 +1594,13 @@ Append to `impl PolicyVault`:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault pay_prechecks_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper pay_prechecks_test`
 Expected: 3 tests PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/tests/pay_prechecks_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/tests/pay_prechecks_test.rs
 git commit -m "feat(policy_vault): pay() pre-checks"
 ```
 
@@ -1571,12 +1609,12 @@ git commit -m "feat(policy_vault): pay() pre-checks"
 ### Task 1.10: pay() — amount + daily budget enforcement
 
 **Files:**
-- Modify: `contracts/policy_vault/src/vault.rs`
-- Create: `contracts/policy_vault/tests/pay_budget_test.rs`
+- Modify: `contracts/policy-vault/src/vault.rs`
+- Create: `contracts/policy-vault/tests/pay_budget_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/pay_budget_test.rs`:
+`contracts/policy-vault/tests/pay_budget_test.rs`:
 ```rust
 use odra::casper_types::U256;
 use odra::host::Deployer;
@@ -1631,7 +1669,7 @@ fn day_rolls_over_and_resets_budget() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault pay_budget_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper pay_budget_test`
 Expected: FAIL — amount/budget logic missing.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1672,13 +1710,13 @@ Also expose getters:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault pay_budget_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper pay_budget_test`
 Expected: 3 tests PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/tests/pay_budget_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/tests/pay_budget_test.rs
 git commit -m "feat(policy_vault): max_single + daily_limit + day rollover"
 ```
 
@@ -1687,13 +1725,13 @@ git commit -m "feat(policy_vault): max_single + daily_limit + day rollover"
 ### Task 1.11: pay() — CEP-18 transfer + Paid event
 
 **Files:**
-- Modify: `contracts/policy_vault/Cargo.toml` — add `odra-modules`
-- Modify: `contracts/policy_vault/src/vault.rs`
-- Create: `contracts/policy_vault/tests/pay_transfer_test.rs`
+- Modify: `contracts/policy-vault/Cargo.toml` — add `odra-modules`
+- Modify: `contracts/policy-vault/src/vault.rs`
+- Create: `contracts/policy-vault/tests/pay_transfer_test.rs`
 
 - [ ] **Step 1: Write the failing test**
 
-`contracts/policy_vault/tests/pay_transfer_test.rs`:
+`contracts/policy-vault/tests/pay_transfer_test.rs`:
 ```rust
 use odra::casper_types::U256;
 use odra::host::Deployer;
@@ -1744,7 +1782,7 @@ fn pay_transfers_cep18_and_emits_paid_event() {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cargo test -p policy_vault pay_transfer_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper pay_transfer_test`
 Expected: FAIL — vault does not call `cep18.transfer`.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -1766,7 +1804,7 @@ Replace the `let _ = intent_id;` placeholder line with:
         });
 ```
 
-Update `contracts/policy_vault/Cargo.toml`:
+Update `contracts/policy-vault/Cargo.toml`:
 ```toml
 [dev-dependencies]
 odra-test = "2.0.0"
@@ -1775,13 +1813,13 @@ odra-modules = "2.0.0"
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cargo test -p policy_vault pay_transfer_test`
+Run from `contracts/policy-vault/` via cargo-odra: `cargo odra test -b casper pay_transfer_test`
 Expected: PASS — receiver balance and event present.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/src/vault.rs contracts/policy_vault/Cargo.toml contracts/policy_vault/tests/pay_transfer_test.rs
+git add contracts/policy-vault/src/vault.rs contracts/policy-vault/Cargo.toml contracts/policy-vault/tests/pay_transfer_test.rs
 git commit -m "feat(policy_vault): pay() transfers CEP-18 and emits Paid"
 ```
 
@@ -1790,8 +1828,8 @@ git commit -m "feat(policy_vault): pay() transfers CEP-18 and emits Paid"
 ### Task 1.12: WASM artifact build + smoke test
 
 **Files:**
-- Create: `contracts/policy_vault/bin/policy_vault.rs`
-- Modify: `contracts/policy_vault/Cargo.toml` — add `[[bin]]` target gated by feature
+- Create: `contracts/policy-vault/bin/policy_vault.rs`
+- Modify: `contracts/policy-vault/Cargo.toml` — add `[[bin]]` target gated by feature
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1812,7 +1850,7 @@ Expected: FAIL — wasm not built.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`contracts/policy_vault/bin/policy_vault.rs`:
+`contracts/policy-vault/bin/policy_vault.rs`:
 ```rust
 #![no_main]
 #![no_std]
@@ -1828,7 +1866,7 @@ pub extern "C" fn call() {
 }
 ```
 
-Append to `contracts/policy_vault/Cargo.toml`:
+Append to `contracts/policy-vault/Cargo.toml`:
 ```toml
 [[bin]]
 name = "policy_vault"
@@ -1851,7 +1889,7 @@ Expected: prints `ok size=...`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/policy_vault/bin contracts/policy_vault/Cargo.toml scripts/check-vault-wasm.mjs
+git add contracts/policy-vault/bin contracts/policy-vault/Cargo.toml scripts/check-vault-wasm.mjs
 git commit -m "feat(policy_vault): build WASM artifact"
 ```
 

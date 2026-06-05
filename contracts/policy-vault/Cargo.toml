@@ -1,0 +1,37 @@
+[package]
+edition = "2021"
+name = "policy_vault"
+version = "0.1.0"
+
+[dependencies]
+base64ct = { workspace = true }
+blake3 = { workspace = true }
+clap = { workspace = true }
+clap_builder = { workspace = true }
+clap_lex = { workspace = true }
+hashbrown = { workspace = true }
+indexmap = { workspace = true }
+odra = { workspace = true }
+odra-casper-wasm-env = { workspace = true }
+odra-core = { workspace = true }
+odra-macros = { workspace = true }
+
+[dev-dependencies]
+odra-casper-test-vm = { workspace = true }
+odra-test = { workspace = true }
+odra-vm = { workspace = true }
+proptest = { workspace = true }
+tempfile = { workspace = true }
+
+[build-dependencies]
+odra-build = { workspace = true }
+
+[[bin]]
+name = "policy_vault_build_contract"
+path = "bin/build_contract.rs"
+test = false
+
+[[bin]]
+name = "policy_vault_build_schema"
+path = "bin/build_schema.rs"
+test = false

@@ -36,3 +36,19 @@ jobs:
         with: { node-version: 20, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+
+  cargo_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: dtolnay/rust-toolchain@master
+        with: { toolchain: 'nightly-2024-07-31', targets: 'wasm32-unknown-unknown', components: 'rustfmt,clippy' }
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo install cargo-odra@0.1.7 --locked --features cargo-generate/vendored-openssl
+      - run: node scripts/check-cargo.mjs
+      - run: cargo fmt --all -- --check

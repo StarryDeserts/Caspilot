@@ -1,0 +1,29 @@
+[workspace]
+members = ["contracts/policy-vault"]
+resolver = "2"
+
+[workspace.dependencies]
+odra = { version = "=2.0.0", features = [], default-features = false }
+odra-build = { version = "=2.0.0", features = [], default-features = false }
+odra-casper-test-vm = { version = "=2.0.0", features = [], default-features = false }
+odra-casper-wasm-env = { version = "=2.0.0", features = [], default-features = false }
+odra-core = { version = "=2.0.0", features = [], default-features = false }
+odra-macros = { version = "=2.0.0", features = [], default-features = false }
+odra-test = { version = "=2.0.0", features = [], default-features = false }
+odra-vm = { version = "=2.0.0", features = [], default-features = false }
+base64ct = "=1.7.3"
+blake3 = "=1.8.2"
+clap = "=4.5.21"
+clap_builder = "=4.5.21"
+clap_lex = "=0.7.0"
+hashbrown = "=0.15.5"
+indexmap = "=2.11.4"
+proptest = "=1.9.0"
+tempfile = "=3.23.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
+
+[profile.dev.package."*"]
+opt-level = 3
