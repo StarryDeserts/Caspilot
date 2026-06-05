@@ -9,9 +9,12 @@
     "check:workspace": "node scripts/check-workspace.mjs",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "format": "biome format --write .",
+    "format:check": "biome format --diagnostic-level=warn ."
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.0",
     "js-yaml": "^4.1.0"
   }
 }
