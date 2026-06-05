@@ -1,0 +1,6 @@
+{
+  "name": "@caspilot/tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "files": ["tsconfig.lib.json", "tsconfig.node.json"]
+}
