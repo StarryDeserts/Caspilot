@@ -122,7 +122,57 @@ impl PolicyVault {
         self.env().emit_event(Expired {});
     }
 
-    pub fn pay(&mut self, _receiver: Address, _amount: U256, _payload_hash: [u8; 32]) {}
+    pub fn pay(&mut self, receiver: Address, amount: U256, payload_hash: [u8; 32]) {
+        let caller = self.env().caller();
+        if !self.agents.get_or_default(&caller) {
+            self.revert(PolicyVaultError::AgentNotAllowed);
+        }
+        if !self.receivers.get_or_default(&receiver) {
+            self.revert(PolicyVaultError::ReceiverNotAllowed);
+        }
+
+        let now_ms = self.current_time_ms();
+        if now_ms >= self.valid_until_ms.get_or_default() {
+            self.revert(PolicyVaultError::VaultExpired);
+        }
+        if amount > self.max_single.get_or_default() {
+            self.revert(PolicyVaultError::AmountAboveMax);
+        }
+
+        let new_day = now_ms / 86_400_000;
+        let current_day = self.day_index.get_or_default();
+        let current_day_spend = if new_day != current_day {
+            U256::zero()
+        } else {
+            self.day_spend.get_or_default()
+        };
+        let Some(new_day_spend) = current_day_spend.checked_add(amount) else {
+            self.revert(PolicyVaultError::ArithmeticOverflow);
+        };
+        if new_day_spend > self.daily_limit.get_or_default() {
+            self.revert(PolicyVaultError::DayLimitExceeded);
+        }
+        if self.used_payload_hashes.get_or_default(&payload_hash) {
+            self.revert(PolicyVaultError::NonceAlreadyUsed);
+        }
+
+        self.execute_token_transfer(receiver, amount);
+        let Some(paid_total_after) = self.paid_total.get_or_default().checked_add(amount) else {
+            self.revert(PolicyVaultError::ArithmeticOverflow);
+        };
+
+        self.day_index.set(new_day);
+        self.day_spend.set(new_day_spend);
+        self.paid_total.set(paid_total_after);
+        self.used_payload_hashes.set(&payload_hash, true);
+        self.env().emit_event(Paid {
+            agent: caller,
+            receiver,
+            amount,
+            payload_hash,
+            paid_total_after,
+        });
+    }
 
     pub fn get_owner(&self) -> Address {
         self.owner.get_or_revert_with(PolicyVaultError::NotOwner)
@@ -185,4 +235,6 @@ impl PolicyVault {
             self.revert(PolicyVaultError::InvalidValidUntil);
         }
     }
+
+    fn execute_token_transfer(&mut self, _receiver: Address, _amount: U256) {}
 }

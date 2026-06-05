@@ -109,8 +109,9 @@ fn event_structs_construct_with_expected_public_field_types() {
 }
 
 #[test]
-fn admin_and_pay_signatures_are_callable_without_p1_2_or_p1_3_behavior_assertions() {
+fn admin_and_pay_signatures_are_callable_with_valid_policy_setup() {
     let env = odra_test::env();
+    let owner = env.get_account(0);
     let token_package = env.get_account(1);
     let agent = env.get_account(2);
     let receiver = env.get_account(3);
@@ -126,11 +127,14 @@ fn admin_and_pay_signatures_are_callable_without_p1_2_or_p1_3_behavior_assertion
     );
 
     vault.allow_agent(agent);
-    vault.revoke_agent(agent);
     vault.allow_receiver(receiver);
+    env.set_caller(agent);
+    vault.pay(receiver, u256(1), [9u8; 32]);
+
+    env.set_caller(owner);
+    vault.revoke_agent(agent);
     vault.revoke_receiver(receiver);
     vault.set_limits(u256(4), u256(5));
     vault.set_valid_until(6);
     vault.expire_now();
-    vault.pay(receiver, u256(1), [9u8; 32]);
 }
