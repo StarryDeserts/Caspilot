@@ -202,7 +202,7 @@ pub enum PolicyVaultError {
     InsufficientVaultBalance = 8,
     ArithmeticOverflow = 9,
     InvalidValidUntil = 10,
-    Cep18CallFailed = 11,
+    Cep18CallFailed = 11, // Reserved for future non-reverting CEP-18 adapter paths; unused by Odra 2.0 generated refs.
 }
 
 #[odra::event] pub struct VaultConfigured { pub owner: Address, pub token_package: Address, pub valid_until_ms: u64 }
@@ -278,8 +278,10 @@ impl PolicyVault {
 6. `new_day_spend = day_spend.checked_add(amount).ok_or(ArithmeticOverflow)?`; require `new_day_spend <= daily_limit` else `DayLimitExceeded`.
 7. `!used_payload_hashes.get(payload_hash)` else `NonceAlreadyUsed`.
 8. Self-balance ≥ amount via CEP-18 `balance_of(self)` else `InsufficientVaultBalance`.
-9. Cross-contract call CEP-18 `transfer(receiver, amount)`; failure → `Cep18CallFailed`.
-10. Checked add `paid_total`; commit `day_spend`, `used_payload_hashes[payload_hash] = true`; emit `Paid`.
+9. Cross-contract call CEP-18 `transfer(receiver, amount)`. Under Odra 2.0, generated cross-contract refs propagate CEP-18 callee failures directly; PolicyVault does not catch/map them to `PolicyVaultError::Cep18CallFailed`.
+10. Checked add `paid_total` before the external call; commit `day_spend`, `paid_total`, and `used_payload_hashes[payload_hash] = true` only after transfer succeeds; emit `Paid`.
+
+**Odra 2.0 cross-contract failure behavior:** CEP-18 transfer failures propagate the CEP-18 error code directly because generated `ContractRef` calls revert on callee failure and do not expose an in-contract `OdraResult`. PolicyVault's required guarantee is accounting safety: when the CEP-18 transfer reverts, `day_spend`, `paid_total`, and `used_payload_hashes` must remain unchanged. `Cep18CallFailed` remains reserved for a future lower-level/non-reverting adapter path, but is currently unused by the Odra 2.0 generated-ref implementation.
 
 **CEP-18 external interface (declared explicit, asserted at boot):**
 
@@ -1310,8 +1312,8 @@ export const x402Router: Hono;           // /supported, /verify, /settle
 #[test] fn deploys_cep18_then_policy_vault_in_host_env();
 #[test] fn vault_transfer_calls_cep18_transfer_with_correct_recipient_and_amount();
 #[test] fn vault_calls_cep18_balance_of_self_before_transfer();
-#[test] fn vault_pay_reverts_Cep18CallFailed_when_cep18_returns_error();
-#[test] fn vault_pay_does_not_credit_paid_total_when_cep18_transfer_fails();
+#[test] fn vault_pay_propagates_cep18_error_when_odra_generated_ref_transfer_fails();
+#[test] fn vault_pay_does_not_change_accounting_when_cep18_transfer_fails();
 #[test] fn integration_full_flow_init_allow_pay_balanceof_matches_expected();
 #[test] fn integration_with_Cep18X402_token_having_transfer_with_authorization();
 ```
