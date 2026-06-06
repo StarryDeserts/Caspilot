@@ -543,6 +543,27 @@ git commit -m "ci: add typecheck/test/format jobs"
 
 > **Phase note (cargo-odra workflow):** P0 deferred the Cargo bootstrap (see Task 0.4). Task 1.0 below brings the Rust side of the repo online using Odra's CLI. For P1 tasks, default to `cargo odra test -b casper` for tests and `cargo odra build` for builds from `contracts/policy-vault/`; `cargo-odra 0.1.7` does not accept `-b` on `build`. Do not use plain `cargo test` as the default unless a specific test is known to work under plain Cargo and that exception is documented.
 
+> **Execution reconciliation (2026-06-06 — authoritative).** Phase 1 was executed as a re-sequenced small-gate set **P1.0–P1.5**, not the original Task 1.0–1.12 numbering listed below. The implemented contract matches **approved spec §3A.2** (`docs/superpowers/specs/2026-06-05-caspilot-design.md`), which is the authoritative ABI; the Task 1.0–1.12 bodies below are retained for historical traceability only. All P1 code lives in `contracts/policy-vault/src/{lib.rs,errors.rs,events.rs}` as a single `lib.rs` module — **not** the `src/vault.rs` submodule those task bodies assume.
+>
+> **Executed gate → original task(s) → commit:**
+>
+> | Executed gate | Covers original task(s) | Commit |
+> |---|---|---|
+> | P1.0 — Odra/cargo workspace bootstrap | 1.0 | `23f8dde` |
+> | P1.1 — ABI skeleton (errors + events + storage + signatures + init/view tests) | 1.1, 1.2, 1.3 | `2669bce` |
+> | P1.2 — owner/admin controls (allow/revoke agent+receiver, `set_limits`, `set_valid_until`, `expire_now`) | 1.4 (owner-guard only), 1.5 | `c34db50` |
+> | P1.3 — `pay()` policy checks (CEP-18 transfer stubbed) | 1.8, 1.9, 1.10 | `4335aa7` |
+> | P1.4 — CEP-18 transfer integration + `Paid` event | 1.11 | `3ca890d` |
+> | P1.5 — WASM artifact smoke gate | 1.12 | `797b0d6` |
+> | docs — Odra CEP-18 failure propagation | — | `9163194` |
+>
+> **Dropped (NOT in spec §3A.2 — intentionally not implemented; do not resurrect from the task bodies below without a spec change):**
+> - **pause/unpause** (Task 1.4) — superseded by `expire_now`; there is no `paused` flag in the spec ABI.
+> - **update_config (monotonic version)** (Task 1.6) — superseded by separate `set_limits` + `set_valid_until`; there is no config-version field.
+> - **rotate_admin** (Task 1.7) — `owner` is fixed at `init`; there is no owner-rotation method in the spec ABI.
+>
+> **Status: Phase 1 complete.** Contract gate live-verified 2026-06-06 via `node scripts/check-cargo.mjs`: 29 Rust tests pass (5 ABI + 10 admin + 4 CEP-18 + 10 pay), `cargo odra build` green, `PolicyVault.wasm` = 276913 bytes (rustc `nightly-2024-07-31`, `cargo-odra 0.1.7`).
+
 ### Task 1.0: Cargo workspace bootstrap via `cargo-odra`
 
 **Files:**
@@ -1078,7 +1099,7 @@ git commit -m "feat(policy_vault): add storage layout and init()"
 
 ---
 
-### Task 1.4: Admin guard + pause/unpause
+### Task 1.4: Admin guard + pause/unpause — PARTIALLY SUPERSEDED (owner guard shipped in P1.2 `c34db50`; pause/unpause DROPPED — not in spec §3A.2)
 
 **Files:**
 - Modify: `contracts/policy-vault/src/vault.rs`
@@ -1265,7 +1286,7 @@ git commit -m "feat(policy_vault): allowlist add/remove for agents+receivers"
 
 ---
 
-### Task 1.6: update_config (monotonic version)
+### Task 1.6: update_config (monotonic version) — DROPPED (not in spec §3A.2; superseded by `set_limits` + `set_valid_until`)
 
 **Files:**
 - Modify: `contracts/policy-vault/src/vault.rs`
@@ -1355,7 +1376,7 @@ git commit -m "feat(policy_vault): monotonic update_config"
 
 ---
 
-### Task 1.7: rotate_admin
+### Task 1.7: rotate_admin — DROPPED (not in spec §3A.2; `owner` is fixed at `init`)
 
 **Files:**
 - Modify: `contracts/policy-vault/src/vault.rs`

@@ -1,6 +1,13 @@
 # Caspilot
 
-P0 bootstrapped the TypeScript monorepo. P1.0 adds the Rust/Odra workspace for the minimal `policy_vault` contract stub under `contracts/policy-vault/`.
+Autonomous DeFi-yield agent for the Casper Agentic Buildathon 2026 — two product lines (an x402-paid agent API and a delegated on-chain PolicyVault) over one backend. The authoritative design is `docs/superpowers/specs/2026-06-05-caspilot-design.md`; the phased build lives in `docs/superpowers/plans/2026-06-05-caspilot-implementation.md`.
+
+## Status
+
+- **P0 — Monorepo bootstrap: complete.** pnpm workspace, strict shared `tsconfig`, vitest, biome, GitHub Actions CI.
+- **Phase 1 — PolicyVault Odra contract: complete (P1.0–P1.5).** The full spec §3A.2 ABI lives in `contracts/policy-vault/src/{lib.rs,errors.rs,events.rs}`: owner/admin controls (allow/revoke agents + receivers, `set_limits`, `set_valid_until`, `expire_now`), and `pay()` enforcing agent/receiver allowlists, validity window, per-payment + daily limits, UTC-day rollover, `payload_hash` replay protection, checked-add overflow, and a CEP-18 `transfer` after a self-balance check. 29 Rust tests pass and `PolicyVault.wasm` builds via the cargo-odra workflow (`node scripts/check-cargo.mjs`).
+  - Odra 2.0 note: CEP-18 callee transfer failures propagate the CEP-18 error code directly (generated `ContractRef` calls revert on failure); PolicyVault's guarantee is that no `day_spend` / `paid_total` / `used_payload_hashes` state changes when a transfer reverts. `Cep18CallFailed` is reserved for a future non-reverting adapter path.
+- **Phases 2–6 — not started:** x402 gateway + payment ledger, SignerGuard, intent FSM + adapters + Hono API, Next.js web UI, and the Tier-1 demo harness (real on-chain proof).
 
 ## Toolchain
 
