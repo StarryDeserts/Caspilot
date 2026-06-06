@@ -17,7 +17,7 @@
 
 **Source of truth:** `caspilot/docs/superpowers/specs/2026-06-05-caspilot-design.md` (committed). Open follow-ups are tracked at the end of this plan.
 
-**Working directory for ALL paths in this plan:** `/home/stardust/dev/HackQuest/caspilot/` (i.e., paths like `packages/x402/src/...` are relative to this directory).
+**Working directory for ALL paths in this plan:** `/home/stardust/dev/HackQuest/caspilot/` (i.e., paths like `packages/x402-gateway/src/...` are relative to this directory).
 
 **Phases:**
 - P0 — Monorepo bootstrap (6 tasks)
@@ -1893,18 +1893,39 @@ git commit -m "test(policy-vault): add WASM artifact smoke check"
 
 > **Storage reminder:** This phase uses **SQLite + Drizzle + WAL** on a persistent volume. UNIQUE indexes live on SQLite tables. Postgres/Turso is a documented post-hackathon migration path only — do NOT implement Postgres in P2.
 
-### Task 2.1: Package skeleton `@caspilot/x402`
+> **⚠️ Canonical layout (reconciled 2026-06-06 — supersedes the flat sketches below):**
+> Phase 2 ships **one** npm package, **`@caspilot/x402`**, rooted at **`packages/x402-gateway/`**. The authoritative wire types are **spec §3B.0 "x402 Official Wire Types (LOCKED)"** — where this plan and §3B.0 disagree, **§3B.0 wins**. Schemas live one-per-concern under `src/schemas/*.schema.ts` and each module **exports both the Zod schema and the inferred type** (the spec's `normalize.ts` uses primitive names like `CasperAccountAddressHex` as type annotations, so same-name type exports are required). Wire→normalized helpers live in `src/schemas/normalize.ts`. Frozen Go-pinned fixtures live in `packages/x402-gateway/__fixtures__/*.json`.
+>
+> **Stale path → canonical mapping** (older flat references in the task bodies below resolve as):
+>
+> | Stale (flat) reference | Canonical (spec §3B.0) |
+> |---|---|
+> | `src/primitives.ts` | `src/schemas/primitives.schema.ts` |
+> | `src/payload.ts` | `src/schemas/payment-payload.schema.ts` |
+> | `src/requirements.ts` | `src/schemas/payment-requirements.schema.ts` |
+> | `src/supported.ts` | `src/schemas/supported.schema.ts` |
+> | `src/verify-request.ts` + `src/verify-response.ts` | `src/schemas/verify.schema.ts` |
+> | `src/settle.ts` | `src/schemas/settle.schema.ts` |
+> | error-reason enums / `src/schemas.ts` | `src/schemas/errors.schema.ts` |
+> | `src/header.ts`, `src/facilitator.ts` | stay at **package root** (`src/`), NOT under `src/schemas/` |
+> | `test/fixtures/*.json` | `__fixtures__/*.json` |
+>
+> **Open conflict — Task 2.14:** that task's body still describes a *second*, separate package named `@caspilot/x402-gateway` living at the same `packages/x402-gateway/` path. That collides with the single-package decision above and is **flagged, not yet resolved** — defer the rename/merge to when Task 2.14 is actually executed; do not silently re-architect it here.
+>
+> **Status:** Task 2.1 was executed at the canonical path (`packages/x402-gateway/`, name `@caspilot/x402`, `src/schemas/*.schema.ts` placeholders) and committed as `26ec797`.
+
+### Task 2.1: Package skeleton `@caspilot/x402` — ✅ executed at canonical path (`26ec797`)
 
 **Files:**
-- Create: `packages/x402/package.json`
-- Create: `packages/x402/tsconfig.json`
-- Create: `packages/x402/vitest.config.ts`
-- Create: `packages/x402/src/index.ts`
-- Create: `packages/x402/test/_smoke.test.ts`
+- Create: `packages/x402-gateway/package.json`
+- Create: `packages/x402-gateway/tsconfig.json`
+- Create: `packages/x402-gateway/vitest.config.ts`
+- Create: `packages/x402-gateway/src/index.ts`
+- Create: `packages/x402-gateway/test/_smoke.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/_smoke.test.ts`:
+`packages/x402-gateway/test/_smoke.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import { X402_VERSION } from '../src/index.js';
@@ -1921,7 +1942,7 @@ Expected: FAIL — package missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/package.json`:
+`packages/x402-gateway/package.json`:
 ```json
 {
   "name": "@caspilot/x402",
@@ -1945,7 +1966,7 @@ Expected: FAIL — package missing.
 }
 ```
 
-`packages/x402/tsconfig.json`:
+`packages/x402-gateway/tsconfig.json`:
 ```json
 {
   "extends": "@caspilot/tsconfig/tsconfig.lib.json",
@@ -1954,19 +1975,19 @@ Expected: FAIL — package missing.
 }
 ```
 
-`packages/x402/vitest.config.ts`:
+`packages/x402-gateway/vitest.config.ts`:
 ```ts
 import base from '../../vitest.config.base.js';
 export default base;
 ```
 
-`packages/x402/src/index.ts`:
+`packages/x402-gateway/src/index.ts`:
 ```ts
 export const X402_VERSION = 2 as const;
 export * from './primitives.js';
 ```
 
-`packages/x402/src/primitives.ts`:
+`packages/x402-gateway/src/schemas/primitives.schema.ts`:
 ```ts
 // Filled in next task.
 export {};
@@ -1989,12 +2010,12 @@ git commit -m "chore(x402): scaffold package"
 ### Task 2.2: x402 primitive Zod schemas
 
 **Files:**
-- Modify: `packages/x402/src/primitives.ts`
-- Create: `packages/x402/test/primitives.test.ts`
+- Modify: `packages/x402-gateway/src/schemas/primitives.schema.ts`
+- Create: `packages/x402-gateway/test/primitives.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/primitives.test.ts`:
+`packages/x402-gateway/test/primitives.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import {
@@ -2003,7 +2024,7 @@ import {
   CasperSignatureHex,
   DecimalsField,
   decimalsToNumber,
-} from '../src/primitives.js';
+} from '../src/schemas/primitives.schema.js';
 
 describe('CasperAccountAddressHex', () => {
   it('accepts 00 prefix + 32 bytes', () => {
@@ -2059,7 +2080,7 @@ Expected: FAIL — exports missing.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/src/primitives.ts`:
+`packages/x402-gateway/src/schemas/primitives.schema.ts`:
 ```ts
 import { z } from 'zod';
 
@@ -2105,7 +2126,7 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/x402/src/primitives.ts packages/x402/test/primitives.test.ts
+git add packages/x402-gateway/src/schemas/primitives.schema.ts packages/x402-gateway/test/primitives.test.ts
 git commit -m "feat(x402): casper primitive schemas + decimals union"
 ```
 
@@ -2114,15 +2135,15 @@ git commit -m "feat(x402): casper primitive schemas + decimals union"
 ### Task 2.3: PaymentRequirements + canonical payload
 
 **Files:**
-- Create: `packages/x402/src/requirements.ts`
-- Create: `packages/x402/src/payload.ts`
-- Modify: `packages/x402/src/index.ts` — re-export
-- Create: `packages/x402/test/requirements.test.ts`
-- Create: `packages/x402/test/payload.test.ts`
+- Create: `packages/x402-gateway/src/requirements.ts`
+- Create: `packages/x402-gateway/src/payload.ts`
+- Modify: `packages/x402-gateway/src/index.ts` — re-export
+- Create: `packages/x402-gateway/test/requirements.test.ts`
+- Create: `packages/x402-gateway/test/payload.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/requirements.test.ts`:
+`packages/x402-gateway/test/requirements.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import { PaymentRequirements } from '../src/requirements.js';
@@ -2166,7 +2187,7 @@ describe('PaymentRequirements', () => {
 });
 ```
 
-`packages/x402/test/payload.test.ts`:
+`packages/x402-gateway/test/payload.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import { PaymentPayload } from '../src/payload.js';
@@ -2202,7 +2223,7 @@ Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/src/requirements.ts`:
+`packages/x402-gateway/src/requirements.ts`:
 ```ts
 import { z } from 'zod';
 import { CasperAccountAddressHex, DecimalsField } from './primitives.js';
@@ -2242,7 +2263,7 @@ export const PaymentRequirements = z.object({
 export type PaymentRequirements = z.infer<typeof PaymentRequirements>;
 ```
 
-`packages/x402/src/payload.ts`:
+`packages/x402-gateway/src/payload.ts`:
 ```ts
 import { z } from 'zod';
 import { CasperNetwork } from './requirements.js';
@@ -2275,7 +2296,7 @@ export const PaymentPayload = z.object({
 export type PaymentPayload = z.infer<typeof PaymentPayload>;
 ```
 
-Update `packages/x402/src/index.ts`:
+Update `packages/x402-gateway/src/index.ts`:
 ```ts
 export const X402_VERSION = 2 as const;
 export * from './primitives.js';
@@ -2291,7 +2312,7 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/x402/src packages/x402/test
+git add packages/x402-gateway/src packages/x402-gateway/test
 git commit -m "feat(x402): PaymentRequirements + PaymentPayload schemas"
 ```
 
@@ -2300,13 +2321,13 @@ git commit -m "feat(x402): PaymentRequirements + PaymentPayload schemas"
 ### Task 2.4: SupportedResponse
 
 **Files:**
-- Create: `packages/x402/src/supported.ts`
-- Modify: `packages/x402/src/index.ts`
-- Create: `packages/x402/test/supported.test.ts`
+- Create: `packages/x402-gateway/src/supported.ts`
+- Modify: `packages/x402-gateway/src/index.ts`
+- Create: `packages/x402-gateway/test/supported.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/supported.test.ts`:
+`packages/x402-gateway/test/supported.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import { SupportedResponse } from '../src/supported.js';
@@ -2336,7 +2357,7 @@ Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/src/supported.ts`:
+`packages/x402-gateway/src/supported.ts`:
 ```ts
 import { z } from 'zod';
 import { CasperNetwork } from './requirements.js';
@@ -2357,7 +2378,7 @@ export const SupportedResponse = z.object({
 export type SupportedResponse = z.infer<typeof SupportedResponse>;
 ```
 
-Add `export * from './supported.js';` to `packages/x402/src/index.ts`.
+Add `export * from './supported.js';` to `packages/x402-gateway/src/index.ts`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2367,7 +2388,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/x402/src/supported.ts packages/x402/src/index.ts packages/x402/test/supported.test.ts
+git add packages/x402-gateway/src/supported.ts packages/x402-gateway/src/index.ts packages/x402-gateway/test/supported.test.ts
 git commit -m "feat(x402): SupportedResponse schema"
 ```
 
@@ -2376,13 +2397,13 @@ git commit -m "feat(x402): SupportedResponse schema"
 ### Task 2.5: VerifyRequest schema
 
 **Files:**
-- Create: `packages/x402/src/verify-request.ts`
-- Modify: `packages/x402/src/index.ts`
-- Create: `packages/x402/test/verify-request.test.ts`
+- Create: `packages/x402-gateway/src/verify-request.ts`
+- Modify: `packages/x402-gateway/src/index.ts`
+- Create: `packages/x402-gateway/test/verify-request.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/verify-request.test.ts`:
+`packages/x402-gateway/test/verify-request.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import { VerifyRequest } from '../src/verify-request.js';
@@ -2436,7 +2457,7 @@ Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/src/verify-request.ts`:
+`packages/x402-gateway/src/verify-request.ts`:
 ```ts
 import { z } from 'zod';
 import { PaymentPayload } from './payload.js';
@@ -2461,7 +2482,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/x402/src/verify-request.ts packages/x402/src/index.ts packages/x402/test/verify-request.test.ts
+git add packages/x402-gateway/src/verify-request.ts packages/x402-gateway/src/index.ts packages/x402-gateway/test/verify-request.test.ts
 git commit -m "feat(x402): VerifyRequest schema"
 ```
 
@@ -2470,13 +2491,13 @@ git commit -m "feat(x402): VerifyRequest schema"
 ### Task 2.6: VerifyResponse Wire + Normalized + normalizer
 
 **Files:**
-- Create: `packages/x402/src/verify-response.ts`
-- Modify: `packages/x402/src/index.ts`
-- Create: `packages/x402/test/verify-response.test.ts`
+- Create: `packages/x402-gateway/src/verify-response.ts`
+- Modify: `packages/x402-gateway/src/index.ts`
+- Create: `packages/x402-gateway/test/verify-response.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/verify-response.test.ts`:
+`packages/x402-gateway/test/verify-response.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import {
@@ -2521,7 +2542,7 @@ Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/src/verify-response.ts`:
+`packages/x402-gateway/src/verify-response.ts`:
 ```ts
 import { z } from 'zod';
 import { CasperAccountAddressHex } from './primitives.js';
@@ -2578,7 +2599,7 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/x402/src/verify-response.ts packages/x402/src/index.ts packages/x402/test/verify-response.test.ts
+git add packages/x402-gateway/src/verify-response.ts packages/x402-gateway/src/index.ts packages/x402-gateway/test/verify-response.test.ts
 git commit -m "feat(x402): VerifyResponse wire + normalized"
 ```
 
@@ -2587,13 +2608,13 @@ git commit -m "feat(x402): VerifyResponse wire + normalized"
 ### Task 2.7: SettleRequest + SettleResponse Wire + Normalized
 
 **Files:**
-- Create: `packages/x402/src/settle.ts`
-- Modify: `packages/x402/src/index.ts`
-- Create: `packages/x402/test/settle.test.ts`
+- Create: `packages/x402-gateway/src/settle.ts`
+- Modify: `packages/x402-gateway/src/index.ts`
+- Create: `packages/x402-gateway/test/settle.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/settle.test.ts`:
+`packages/x402-gateway/test/settle.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import {
@@ -2690,7 +2711,7 @@ Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/src/settle.ts`:
+`packages/x402-gateway/src/settle.ts`:
 ```ts
 import { z } from 'zod';
 import { PaymentPayload } from './payload.js';
@@ -2753,7 +2774,7 @@ Expected: all PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/x402/src/settle.ts packages/x402/src/index.ts packages/x402/test/settle.test.ts
+git add packages/x402-gateway/src/settle.ts packages/x402-gateway/src/index.ts packages/x402-gateway/test/settle.test.ts
 git commit -m "feat(x402): SettleRequest + Wire/Normalized SettleResponse"
 ```
 
@@ -2762,13 +2783,13 @@ git commit -m "feat(x402): SettleRequest + Wire/Normalized SettleResponse"
 ### Task 2.8: PAYMENT-SIGNATURE header codec (base64url JSON, no padding)
 
 **Files:**
-- Create: `packages/x402/src/header.ts`
-- Modify: `packages/x402/src/index.ts`
-- Create: `packages/x402/test/header.test.ts`
+- Create: `packages/x402-gateway/src/header.ts`
+- Modify: `packages/x402-gateway/src/index.ts`
+- Create: `packages/x402-gateway/test/header.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/header.test.ts`:
+`packages/x402-gateway/test/header.test.ts`:
 ```ts
 import { describe, it, expect } from 'vitest';
 import { encodePaymentSignatureHeader, decodePaymentSignatureHeader } from '../src/header.js';
@@ -2815,7 +2836,7 @@ Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/src/header.ts`:
+`packages/x402-gateway/src/header.ts`:
 ```ts
 import { PaymentPayload } from './payload.js';
 
@@ -2858,7 +2879,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/x402/src/header.ts packages/x402/src/index.ts packages/x402/test/header.test.ts
+git add packages/x402-gateway/src/header.ts packages/x402-gateway/src/index.ts packages/x402-gateway/test/header.test.ts
 git commit -m "feat(x402): PAYMENT-SIGNATURE header codec"
 ```
 
@@ -2867,13 +2888,13 @@ git commit -m "feat(x402): PAYMENT-SIGNATURE header codec"
 ### Task 2.9: Facilitator HTTP client
 
 **Files:**
-- Create: `packages/x402/src/facilitator.ts`
-- Modify: `packages/x402/src/index.ts`
-- Create: `packages/x402/test/facilitator.test.ts`
+- Create: `packages/x402-gateway/src/facilitator.ts`
+- Modify: `packages/x402-gateway/src/index.ts`
+- Create: `packages/x402-gateway/test/facilitator.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/facilitator.test.ts`:
+`packages/x402-gateway/test/facilitator.test.ts`:
 ```ts
 import { describe, it, expect, vi } from 'vitest';
 import { FacilitatorClient } from '../src/facilitator.js';
@@ -2960,7 +2981,7 @@ Expected: FAIL.
 
 - [ ] **Step 3: Write minimal implementation**
 
-`packages/x402/src/facilitator.ts`:
+`packages/x402-gateway/src/facilitator.ts`:
 ```ts
 import { VerifyRequest } from './verify-request.js';
 import {
@@ -3038,7 +3059,7 @@ Expected: 3 PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/x402/src/facilitator.ts packages/x402/src/index.ts packages/x402/test/facilitator.test.ts
+git add packages/x402-gateway/src/facilitator.ts packages/x402-gateway/src/index.ts packages/x402-gateway/test/facilitator.test.ts
 git commit -m "feat(x402): facilitator HTTP client with wire→normalized"
 ```
 
@@ -3046,16 +3067,18 @@ git commit -m "feat(x402): facilitator HTTP client with wire→normalized"
 
 ### Task 2.10: Wire fixtures regression suite
 
+> **⚠️ Canonical path:** frozen Go-pinned wire fixtures live at **`packages/x402-gateway/__fixtures__/*.json`** (per §3B.11 and the Phase 2 banner), not `test/fixtures/`. Read every `test/fixtures/<name>.json` below as `__fixtures__/<name>.json`.
+
 **Files:**
-- Create: `packages/x402/test/fixtures/verify-wire-ok.json`
-- Create: `packages/x402/test/fixtures/verify-wire-invalid.json`
-- Create: `packages/x402/test/fixtures/settle-wire-ok.json`
-- Create: `packages/x402/test/fixtures/supported-wire.json`
-- Create: `packages/x402/test/fixtures.test.ts`
+- Create: `packages/x402-gateway/test/fixtures/verify-wire-ok.json`
+- Create: `packages/x402-gateway/test/fixtures/verify-wire-invalid.json`
+- Create: `packages/x402-gateway/test/fixtures/settle-wire-ok.json`
+- Create: `packages/x402-gateway/test/fixtures/supported-wire.json`
+- Create: `packages/x402-gateway/test/fixtures.test.ts`
 
 - [ ] **Step 1: Write the failing test**
 
-`packages/x402/test/fixtures.test.ts`:
+`packages/x402-gateway/test/fixtures.test.ts`:
 ```ts
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -3092,7 +3115,7 @@ describe('wire fixtures', () => {
 
 - [ ] **Step 2: Write fixtures (these are also part of "failing test" since file reads will fail until present)**
 
-`packages/x402/test/fixtures/supported-wire.json`:
+`packages/x402-gateway/test/fixtures/supported-wire.json`:
 ```json
 {
   "kinds": [
@@ -3101,17 +3124,17 @@ describe('wire fixtures', () => {
 }
 ```
 
-`packages/x402/test/fixtures/verify-wire-ok.json`:
+`packages/x402-gateway/test/fixtures/verify-wire-ok.json`:
 ```json
 { "isValid": true, "payer": "0011111111111111111111111111111111111111111111111111111111111111" }
 ```
 
-`packages/x402/test/fixtures/verify-wire-invalid.json`:
+`packages/x402-gateway/test/fixtures/verify-wire-invalid.json`:
 ```json
 { "isValid": false, "invalidReason": "invalid_signature" }
 ```
 
-`packages/x402/test/fixtures/settle-wire-ok.json`:
+`packages/x402-gateway/test/fixtures/settle-wire-ok.json`:
 ```json
 {
   "success": true,
@@ -3129,7 +3152,7 @@ Expected: 4 PASS.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add packages/x402/test/fixtures.test.ts packages/x402/test/fixtures
+git add packages/x402-gateway/test/fixtures.test.ts packages/x402-gateway/test/fixtures
 git commit -m "test(x402): pin wire fixtures for verify/settle/supported"
 ```
 
@@ -3581,6 +3604,8 @@ git commit -m "feat(ledger): payment-ledger with unique nonce + payload"
 ---
 
 ### Task 2.14: x402 gateway middleware (Hono)
+
+> **⚠️ Unresolved collision (see Phase 2 banner):** as written, this task re-creates `package.json` / `tsconfig.json` / `vitest.config.ts` / `src/index.ts` at `packages/x402-gateway/` under a **second** package name `@caspilot/x402-gateway`, which collides with Task 2.1's `@caspilot/x402` already rooted there. **Do not blindly create these files when executing 2.14** — at that point decide whether the Hono middleware is (a) a new module inside the single `@caspilot/x402` package (likely), or (b) a genuinely separate package at a *different* path. This reconciliation deliberately leaves the body unchanged; resolve the package identity when 2.14 is actually built.
 
 **Files:**
 - Create: `packages/x402-gateway/package.json`
@@ -9544,7 +9569,7 @@ git commit -m "test: P6 acceptance summary"
 
 These are deliberately deferred items. Each gets a tracking issue at the start of the corresponding phase, not a code change in this plan.
 
-- **Tighten `CasperSignatureHex` regex.** Current schema accepts any 130-hex string. Once the Go facilitator fixture pins the wire shape (Ed25519 vs Secp256k1 length and tag byte), narrow the union accordingly. Owner: P2 schemas. Touches: `packages/x402/src/schemas.ts`.
+- **Tighten `CasperSignatureHex` regex.** Current schema accepts any 130-hex string. Once the Go facilitator fixture pins the wire shape (Ed25519 vs Secp256k1 length and tag byte), narrow the union accordingly. Owner: P2 schemas. Touches: `packages/x402-gateway/src/schemas/primitives.schema.ts`.
 - **Settle wire shape variants.** `WireSettleResponseSchema` currently treats `transaction` as a bare deploy-hash string with sibling `network`+`payer`. If the facilitator emits the object form `{ transaction: { chainId, deployHash }, payer }` instead, add a discriminated union and update `normalizeSettleResponse`. Owner: P2 schemas + facilitator client.
 - **CSPR.cloud proxy hardening.** Document exact read-only methods used by the browser; add a backend allowlist for CSPR.cloud paths the API may proxy. Owner: P5 + audit-trace.
 - **Real RPC adapter for harness.** `scripts/run-tier1.ts` and `scripts/deploy-vault.ts` currently fail in real mode with an explicit "wire @caspilot/adapters" error. Wire them through `@caspilot/adapters.casperRpc` once the adapter is integration-tested against testnet. Owner: P6, after P4 adapters land.
