@@ -1,2 +1,16 @@
-// Placeholder — x402 error-code schema (spec §3B.0). Zod schema + inferred type land in Phase 2.
-export {};
+import { z } from 'zod';
+
+export const X402ErrorReasonSchema = z.enum([
+  'invalid_payload',
+  'invalid_scheme',
+  'invalid_network',
+  'invalid_asset',
+  'invalid_amount',
+  'expired',
+  'insufficient_funds',
+  'replay_detected',
+  'signature_invalid',
+  'unsupported_kind',
+  'facilitator_unavailable',
+]);
+export type X402ErrorReason = z.infer<typeof X402ErrorReasonSchema>;
