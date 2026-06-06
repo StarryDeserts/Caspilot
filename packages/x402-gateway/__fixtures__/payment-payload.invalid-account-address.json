@@ -1,0 +1,17 @@
+{
+  "x402Version": 2,
+  "scheme": "exact",
+  "network": "casper:casper-test",
+  "payload": {
+    "signature": "a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0f1",
+    "publicKey": "01deadbeefcafebabe0000000000000000000000000000000000000000000000aa",
+    "authorization": {
+      "from": "01deadbeefcafebabe0000000000000000000000000000000000000000000000aa",
+      "to": "00feedfacefeedface0000000000000000000000000000000000000000000000bb",
+      "value": "1000000000",
+      "validAfter": "1717000000",
+      "validBefore": "1717003600",
+      "nonce": "11112222333344445555666677778888aaaabbbbccccddddeeeeffff00001111"
+    }
+  }
+}

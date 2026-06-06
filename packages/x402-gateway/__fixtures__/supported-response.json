@@ -1,0 +1,15 @@
+{
+  "kinds": [
+    {
+      "x402Version": 2,
+      "scheme": "exact",
+      "network": "casper:casper-test",
+      "extra": {
+        "feePayer": "00cafef00dcafef00d0000000000000000000000000000000000000000000000ff",
+        "decimals": 9,
+        "name": "Cep18X402Demo",
+        "version": "1"
+      }
+    }
+  ]
+}
