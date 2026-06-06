@@ -20,5 +20,8 @@
     "binaryen": "^130.0.0",
     "js-yaml": "^4.1.0",
     "wabt": "^1.0.39"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3"]
   }
 }
