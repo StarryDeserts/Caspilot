@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SIGNER_ROLES } from '../src/index.js';
+import { SIGNER_ROLES } from '@caspilot/signer-guard';
 
 describe('SIGNER_ROLES', () => {
   it('declares the three separated signer roles', () => {

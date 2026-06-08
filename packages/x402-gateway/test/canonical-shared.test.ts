@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canonicalJson as sharedCanonicalJson } from '@caspilot/shared';
-import { canonicalJson, canonicalSha256Hex } from '../src/index.js';
+import { canonicalJson, canonicalSha256Hex } from '@caspilot/x402';
 
 describe('x402 canonical helpers', () => {
   it('re-export the shared canonical JSON behavior', () => {
