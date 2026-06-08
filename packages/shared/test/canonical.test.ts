@@ -22,6 +22,11 @@ describe('canonicalJson', () => {
       '{"amount":"000123","nested":{"cap":"5000"}}',
     );
   });
+
+  it('preserves JSON __proto__ keys as data keys', () => {
+    const parsed = JSON.parse('{"__proto__":{"x":1},"a":2}');
+    expect(canonicalJson(parsed)).toBe('{"__proto__":{"x":1},"a":2}');
+  });
 });
 
 describe('canonicalSha256Hex', () => {
