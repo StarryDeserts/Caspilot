@@ -1,0 +1,33 @@
+{
+  "name": "@caspilot/signer-guard",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@caspilot/shared": "workspace:*",
+    "@caspilot/x402": "workspace:*",
+    "better-sqlite3": "^12.2.0",
+    "drizzle-orm": "^0.44.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@caspilot/tsconfig": "workspace:*",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

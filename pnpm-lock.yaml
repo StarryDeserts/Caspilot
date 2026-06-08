@@ -76,6 +76,40 @@ importers:
         specifier: ^2.0.5
         version: 2.1.9(@types/node@22.19.20)
 
+  packages/signer-guard:
+    dependencies:
+      '@caspilot/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@caspilot/x402':
+        specifier: workspace:*
+        version: link:../x402-gateway
+      better-sqlite3:
+        specifier: ^12.2.0
+        version: 12.10.0
+      drizzle-orm:
+        specifier: ^0.44.2
+        version: 0.44.7(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@caspilot/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/better-sqlite3':
+        specifier: ^7.6.11
+        version: 7.6.13
+      '@types/node':
+        specifier: ^22
+        version: 22.19.20
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vitest:
+        specifier: ^2.0.5
+        version: 2.1.9(@types/node@22.19.20)
+
   packages/tsconfig: {}
 
   packages/x402-gateway:
