@@ -11,7 +11,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.12.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
 
@@ -22,7 +22,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.12.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
 
@@ -33,7 +33,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.12.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
@@ -44,7 +44,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         with: { version: 9.12.0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
+        with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - uses: dtolnay/rust-toolchain@master
         with: { toolchain: 'nightly-2024-07-31', targets: 'wasm32-unknown-unknown', components: 'rustfmt,clippy' }
