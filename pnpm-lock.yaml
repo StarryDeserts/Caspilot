@@ -11,12 +11,6 @@ importers:
       '@biomejs/biome':
         specifier: ^1.9.0
         version: 1.9.4
-      '@caspilot/signer-guard':
-        specifier: workspace:*
-        version: link:packages/signer-guard
-      '@caspilot/x402':
-        specifier: workspace:*
-        version: link:packages/x402-gateway
       binaryen:
         specifier: ^130.0.0
         version: 130.0.0
