@@ -10,6 +10,12 @@ export interface SignerGuardDbHandle {
   close(): void;
 }
 
+// This raw DDL is the single RUNTIME source of truth for the
+// signer_spend_ledger table (columns, constraints, and the
+// ix_signer_spend_day performance index). schema.ts is the typed query view
+// over the same table and must be kept in sync with this DDL by hand — there
+// are no drizzle-kit migrations. test/db.test.ts pins this structure so any
+// drift between the two fails loudly.
 const DDL = `
 CREATE TABLE IF NOT EXISTS signer_spend_ledger (
   id           TEXT PRIMARY KEY,

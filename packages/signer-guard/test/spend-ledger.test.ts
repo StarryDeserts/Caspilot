@@ -81,6 +81,21 @@ describe('SpendLedger reservation model', () => {
     expect(nextDay.ok).toBe(true);
   });
 
+  it('rejects malformed atomic amount strings (fail closed, no row inserted)', async () => {
+    for (const bad of ['', '  ', '-5', '1.5', '5x']) {
+      await expect(ledger.reserve(reservation({ amount: bad }), '1000')).rejects.toThrow(TypeError);
+    }
+    // a malformed amount must not have left a reserved row behind: a valid
+    // reserve for the full cap still succeeds afterwards.
+    const ok = await ledger.reserve(reservation({ amount: '1000' }), '1000');
+    expect(ok.ok).toBe(true);
+  });
+
+  it('rejects a malformed day cap string (fail closed)', async () => {
+    await expect(ledger.reserve(reservation({ amount: '1' }), '')).rejects.toThrow(TypeError);
+    await expect(ledger.reserve(reservation({ amount: '1' }), '10x')).rejects.toThrow(TypeError);
+  });
+
   it('releaseExpired releases stale reserved rows and returns the count', async () => {
     now = 1_000;
     const stale = await ledger.reserve(reservation({ intentId: 'stale', traceId: 'trace-stale' }), '1000');

@@ -26,6 +26,19 @@ export interface SpendLedger {
   releaseExpired(nowMs: number, ttlMs: number): Promise<number>;
 }
 
+// A valid atomic amount is one or more ASCII digits: no sign, no decimal
+// point, no whitespace, non-empty. BigInt('') and BigInt('   ') return 0n
+// (they do NOT throw), which at a signing gate would silently become a
+// zero-cost reservation or a zero cap. Validate here so reserve() fails
+// CLOSED on malformed input — the throw precedes any insert, so no row and
+// no signature can result.
+function parseAtomic(label: string, value: string): bigint {
+  if (!/^\d+$/.test(value)) {
+    throw new TypeError(`invalid atomic amount for ${label}: ${JSON.stringify(value)}`);
+  }
+  return BigInt(value);
+}
+
 function isUniqueViolation(err: unknown): boolean {
   return (
     typeof err === 'object' &&
@@ -38,6 +51,14 @@ function isUniqueViolation(err: unknown): boolean {
 export function makeSpendLedger(db: SignerGuardDb, clock: () => number = Date.now): SpendLedger {
   return {
     async reserve(reservation, dayCapAtomic): Promise<ReserveResult> {
+      // Validate inputs BEFORE the transaction so malformed amounts fail
+      // closed (throw) without ever inserting a row.
+      const requested = parseAtomic('amount', reservation.amount);
+      const dayCap = parseAtomic('dayCapAtomic', dayCapAtomic);
+      // Race-safety: the select-then-insert cap check is atomic ONLY under the
+      // single synchronous better-sqlite3 writer (one process, one connection).
+      // UNIQUE(intent_id) backstops a duplicate intent, but does NOT stop two
+      // DIFFERENT intents from racing past the daily cap under concurrent writers.
       return db.transaction((tx) => {
         const rows = tx
           .select({ amount: signerSpendLedger.amount })
@@ -53,8 +74,7 @@ export function makeSpendLedger(db: SignerGuardDb, clock: () => number = Date.no
           )
           .all();
         const spent = rows.reduce((sum, row) => sum + BigInt(row.amount), 0n);
-        const requested = BigInt(reservation.amount);
-        if (spent + requested > BigInt(dayCapAtomic)) {
+        if (spent + requested > dayCap) {
           return { ok: false, reason: 'day_cap_exceeded' };
         }
 
