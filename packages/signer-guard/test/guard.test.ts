@@ -101,4 +101,51 @@ describe('SignerGuard.authorize', () => {
     expect(spendLedger.reserve).not.toHaveBeenCalled();
     expect(signer.sign).not.toHaveBeenCalled();
   });
+
+  it('denies role mismatch before reserve or sign', async () => {
+    const guard = makeSignerGuard({ spendLedger, signer, clock: () => 1_717_000_000_000 });
+
+    const result = await guard.authorize(request({ signerRole: 'demo_sponsored' }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('signer_role_mismatch');
+    expect(spendLedger.reserve).not.toHaveBeenCalled();
+    expect(signer.sign).not.toHaveBeenCalled();
+  });
+
+  it('does not reserve or sign when a policy rule denies the request', async () => {
+    const guard = makeSignerGuard({ spendLedger, signer, clock: () => 1_717_000_000_000 });
+
+    const result = await guard.authorize(request({ traceId: '' }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('trace_id_missing');
+    expect(spendLedger.reserve).not.toHaveBeenCalled();
+    expect(signer.sign).not.toHaveBeenCalled();
+  });
+
+  it('does not sign when reservation fails', async () => {
+    spendLedger.reserve = vi.fn(async () => ({ ok: false, reason: 'day_cap_exceeded' }) as const);
+    const guard = makeSignerGuard({ spendLedger, signer, clock: () => 1_717_000_000_000 });
+
+    const result = await guard.authorize(request());
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('day_cap_exceeded');
+    expect(signer.sign).not.toHaveBeenCalled();
+  });
+
+  it('releases the reservation and returns no signature when signer throws', async () => {
+    signer.sign = vi.fn(async () => {
+      throw new Error('signer unavailable');
+    });
+    const guard = makeSignerGuard({ spendLedger, signer, clock: () => 1_717_000_000_000 });
+
+    const result = await guard.authorize(request());
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('signer_failed');
+    expect(spendLedger.release).toHaveBeenCalledWith('reservation-1');
+    expect(result).not.toHaveProperty('signatureHex');
+  });
 });
