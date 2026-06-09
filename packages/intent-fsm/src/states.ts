@@ -1,0 +1,15 @@
+export const INTENT_STATES = [
+  'DRAFT',
+  'POLICY_VALIDATED',
+  'PAYMENT_REQUIRED',
+  'PAYMENT_VERIFIED',
+  'READY_TO_SUBMIT',
+  'SIGNED_RECEIVED',
+  'ACCEPTED_BY_NODE',
+  'EXECUTED',
+  'FINALIZED',
+  'EXECUTION_FAILED',
+  'REJECTED',
+  'TIMEOUT',
+] as const;
+export type IntentState = (typeof INTENT_STATES)[number];

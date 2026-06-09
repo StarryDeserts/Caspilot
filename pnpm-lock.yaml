@@ -36,6 +36,25 @@ importers:
         specifier: ^2.0.5
         version: 2.1.9(@types/node@22.19.20)
 
+  packages/intent-fsm:
+    dependencies:
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@caspilot/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: ^22
+        version: 22.19.20
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vitest:
+        specifier: ^2.0.5
+        version: 2.1.9(@types/node@22.19.20)
+
   packages/payment-ledger:
     dependencies:
       better-sqlite3:
