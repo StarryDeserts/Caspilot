@@ -5,3 +5,4 @@ export * from './rules.js';
 export * from './db.js';
 export * from './schema.js';
 export * from './spend-ledger.js';
+export * from './guard.js';
