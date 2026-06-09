@@ -96,6 +96,36 @@ describe('SpendLedger reservation model', () => {
     expect(ok.ok).toBe(true);
   });
 
+  it('fails closed when an existing ledger row has a non-digit amount', async () => {
+    // A corrupted/legacy reserved row whose amount is not a digit string must
+    // not be silently coerced (BigInt('') -> 0n) when summing the day's spend:
+    // that would UNDER-COUNT and let a fresh reservation slip past the cap.
+    // Insert such a row directly, bypassing reserve()'s own validation, so it
+    // is picked up by the cap-sum select. The sum must fail closed (throw).
+    handle.sqlite
+      .prepare(
+        `INSERT INTO signer_spend_ledger
+          (id, signer_role, signer_pk, token, day_utc, amount, status, intent_id, trace_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'reserved', ?, ?, ?, ?)`,
+      )
+      .run(
+        'corrupt-row',
+        'local_dev',
+        SIGNER_PK,
+        TOKEN,
+        '2026-06-08',
+        '',
+        'corrupt-intent',
+        'corrupt-trace',
+        now,
+        now,
+      );
+
+    await expect(
+      ledger.reserve(reservation({ intentId: 'fresh', traceId: 'trace-fresh' }), '1000'),
+    ).rejects.toThrow(TypeError);
+  });
+
   it('rejects a malformed day cap string (fail closed)', async () => {
     await expect(ledger.reserve(reservation({ amount: '1' }), '')).rejects.toThrow(TypeError);
     await expect(ledger.reserve(reservation({ amount: '1' }), '10x')).rejects.toThrow(TypeError);

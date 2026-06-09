@@ -73,7 +73,7 @@ export function makeSpendLedger(db: SignerGuardDb, clock: () => number = Date.no
             ),
           )
           .all();
-        const spent = rows.reduce((sum, row) => sum + BigInt(row.amount), 0n);
+        const spent = rows.reduce((sum, row) => sum + parseAtomic('row.amount', row.amount), 0n);
         if (spent + requested > dayCap) {
           return { ok: false, reason: 'day_cap_exceeded' };
         }
