@@ -28,7 +28,11 @@ function request(overrides: Partial<SignRequest> = {}): SignRequest {
     traceId: 'trace-1',
     signerRole: 'local_dev',
     signerPk: SIGNER_PK,
-    unsignedDeploy: { headerJson: { account: SIGNER_PK }, bodyHashHex: BODY_HASH, payloadHex: 'abcd' },
+    unsignedDeploy: {
+      headerJson: { account: SIGNER_PK },
+      bodyHashHex: BODY_HASH,
+      payloadHex: 'abcd',
+    },
     intendedContractPackage: CONTRACT,
     intendedReceiver: RECEIVER,
     intendedToken: TOKEN,
@@ -81,5 +85,20 @@ describe('SignerGuard.authorize', () => {
       '5000',
     );
     expect(signer.sign).toHaveBeenCalledWith(req.unsignedDeploy);
+  });
+
+  it('denies a malformed intended amount before reserving or signing', async () => {
+    const req = request({ intendedAmountAtomic: '12.5' });
+    const guard = makeSignerGuard({ spendLedger, signer, clock: () => 1_717_000_000_000 });
+
+    const result = await guard.authorize(req);
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'amount_malformed',
+      policyDigest: computePolicyDigest(req.policy),
+    });
+    expect(spendLedger.reserve).not.toHaveBeenCalled();
+    expect(signer.sign).not.toHaveBeenCalled();
   });
 });

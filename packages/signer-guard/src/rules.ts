@@ -13,6 +13,13 @@ export function checkPolicyRules(req: SignRequest): RuleDenial | null {
   }
   if (!req.policy.allowedTokens.includes(req.intendedToken)) return 'token_not_allowed';
   if (receiverDenied(req)) return 'receiver_not_allowed';
+  // BigInt() at a signing gate is unsafe on malformed input: '12.5'/'abc' throw,
+  // while ''→0n, ' 5 '→5n, '0x10'→16n, '-5'→-5n silently corrupt the cap check.
+  // Require digits-only so a bad amount fails CLOSED here, before authorize()'s
+  // try/catch — mirrors parseAtomic in spend-ledger.ts.
+  if (!/^\d+$/.test(req.intendedAmountAtomic) || !/^\d+$/.test(req.policy.maxSinglePaymentAtomic)) {
+    return 'amount_malformed';
+  }
   if (BigInt(req.intendedAmountAtomic) > BigInt(req.policy.maxSinglePaymentAtomic)) {
     return 'amount_above_single_cap';
   }

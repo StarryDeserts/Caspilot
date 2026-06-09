@@ -51,6 +51,7 @@ export type SignDenial =
   | 'token_not_allowed'
   | 'receiver_not_allowed'
   | 'amount_above_single_cap'
+  | 'amount_malformed'
   | 'day_cap_exceeded'
   | 'reservation_conflict'
   | 'signer_failed';

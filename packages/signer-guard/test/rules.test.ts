@@ -69,7 +69,9 @@ describe('checkPolicyRules', () => {
   });
 
   it('permits an empty trace id when trace id is not required', () => {
-    expect(checkPolicyRules(makeRequest({ traceId: '', policy: { requireTraceId: false } }))).toBeNull();
+    expect(
+      checkPolicyRules(makeRequest({ traceId: '', policy: { requireTraceId: false } })),
+    ).toBeNull();
   });
 
   it('returns chain_not_allowed when the intended chain is not allowlisted', () => {
@@ -101,7 +103,9 @@ describe('checkPolicyRules', () => {
   });
 
   it('treats empty token allowlists as deny-all by includes behavior', () => {
-    expect(checkPolicyRules(makeRequest({ policy: { allowedTokens: [] } }))).toBe('token_not_allowed');
+    expect(checkPolicyRules(makeRequest({ policy: { allowedTokens: [] } }))).toBe(
+      'token_not_allowed',
+    );
   });
 
   it('always denies receivers when receiver policy is deny_all', () => {
@@ -125,7 +129,9 @@ describe('checkPolicyRules', () => {
 
   it('denies allow_any_with_manual_approval until approval proof exists in a later phase', () => {
     expect(
-      checkPolicyRules(makeRequest({ policy: { receiverPolicy: 'allow_any_with_manual_approval' } })),
+      checkPolicyRules(
+        makeRequest({ policy: { receiverPolicy: 'allow_any_with_manual_approval' } }),
+      ),
     ).toBe('receiver_not_allowed');
   });
 
@@ -138,5 +144,19 @@ describe('checkPolicyRules', () => {
 
   it('does not enforce signer role mismatch in the pure policy rules', () => {
     expect(checkPolicyRules(makeRequest({ signerRole: 'demo_sponsored' }))).toBeNull();
+  });
+
+  it('returns amount_malformed when the intended amount is not a plain digit string', () => {
+    for (const bad of ['', '  ', '-5', '1.5', '0x10', '5x']) {
+      expect(checkPolicyRules(makeRequest({ intendedAmountAtomic: bad }))).toBe('amount_malformed');
+    }
+  });
+
+  it('returns amount_malformed when the single-payment cap is not a plain digit string', () => {
+    for (const bad of ['', '10x', '1.0']) {
+      expect(checkPolicyRules(makeRequest({ policy: { maxSinglePaymentAtomic: bad } }))).toBe(
+        'amount_malformed',
+      );
+    }
   });
 });
