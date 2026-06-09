@@ -75,7 +75,12 @@ describe('SpendLedger reservation model', () => {
   it('day_utc rollover starts a fresh cap window', async () => {
     expect((await ledger.reserve(reservation({ amount: '1000' }), '1000')).ok).toBe(true);
     const nextDay = await ledger.reserve(
-      reservation({ intentId: 'intent-2', traceId: 'trace-2', dayUtc: '2026-06-09', amount: '1000' }),
+      reservation({
+        intentId: 'intent-2',
+        traceId: 'trace-2',
+        dayUtc: '2026-06-09',
+        amount: '1000',
+      }),
       '1000',
     );
     expect(nextDay.ok).toBe(true);
@@ -98,10 +103,16 @@ describe('SpendLedger reservation model', () => {
 
   it('releaseExpired releases stale reserved rows and returns the count', async () => {
     now = 1_000;
-    const stale = await ledger.reserve(reservation({ intentId: 'stale', traceId: 'trace-stale' }), '1000');
+    const stale = await ledger.reserve(
+      reservation({ intentId: 'stale', traceId: 'trace-stale' }),
+      '1000',
+    );
     expect(stale.ok).toBe(true);
     now = 10_000;
-    const fresh = await ledger.reserve(reservation({ intentId: 'fresh', traceId: 'trace-fresh' }), '1000');
+    const fresh = await ledger.reserve(
+      reservation({ intentId: 'fresh', traceId: 'trace-fresh' }),
+      '1000',
+    );
     expect(fresh.ok).toBe(true);
 
     const released = await ledger.releaseExpired(10_000, 5_000);

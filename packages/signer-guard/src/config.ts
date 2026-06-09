@@ -7,7 +7,11 @@ import {
 } from '@caspilot/x402';
 import { SIGNER_ROLES } from './types.js';
 
-export const ReceiverPolicySchema = z.enum(['deny_all', 'allowlist', 'allow_any_with_manual_approval']);
+export const ReceiverPolicySchema = z.enum([
+  'deny_all',
+  'allowlist',
+  'allow_any_with_manual_approval',
+]);
 
 export const SignerGuardPolicySchema = z
   .object({
@@ -27,7 +31,8 @@ export const SignerGuardPolicySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['allowedReceivers'],
-        message: 'allowedReceivers must contain at least one receiver unless receiverPolicy is deny_all',
+        message:
+          'allowedReceivers must contain at least one receiver unless receiverPolicy is deny_all',
       });
     }
 

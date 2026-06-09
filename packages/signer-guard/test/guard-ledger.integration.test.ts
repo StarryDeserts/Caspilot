@@ -31,7 +31,11 @@ function request(overrides: SignRequestOverrides = {}): SignRequest {
     traceId: 'trace-1',
     signerRole: 'local_dev',
     signerPk: SIGNER_PK,
-    unsignedDeploy: { headerJson: { account: SIGNER_PK }, bodyHashHex: BODY_HASH, payloadHex: 'abcd' },
+    unsignedDeploy: {
+      headerJson: { account: SIGNER_PK },
+      bodyHashHex: BODY_HASH,
+      payloadHex: 'abcd',
+    },
     intendedContractPackage: CONTRACT,
     intendedReceiver: RECEIVER,
     intendedToken: TOKEN,

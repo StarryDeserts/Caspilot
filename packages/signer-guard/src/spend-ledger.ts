@@ -107,14 +107,18 @@ export function makeSpendLedger(db: SignerGuardDb, clock: () => number = Date.no
     async commit(reservationId): Promise<void> {
       db.update(signerSpendLedger)
         .set({ status: 'committed', updatedAt: clock() })
-        .where(and(eq(signerSpendLedger.id, reservationId), eq(signerSpendLedger.status, 'reserved')))
+        .where(
+          and(eq(signerSpendLedger.id, reservationId), eq(signerSpendLedger.status, 'reserved')),
+        )
         .run();
     },
 
     async release(reservationId): Promise<void> {
       db.update(signerSpendLedger)
         .set({ status: 'released', updatedAt: clock() })
-        .where(and(eq(signerSpendLedger.id, reservationId), eq(signerSpendLedger.status, 'reserved')))
+        .where(
+          and(eq(signerSpendLedger.id, reservationId), eq(signerSpendLedger.status, 'reserved')),
+        )
         .run();
     },
 

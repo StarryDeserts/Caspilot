@@ -32,7 +32,9 @@ describe('SignerGuardPolicySchema', () => {
       expect(SignerGuardPolicySchema.parse(makePolicy({ signerRole })).signerRole).toBe(signerRole);
     }
 
-    expect(SignerGuardPolicySchema.safeParse(makePolicy({ signerRole: 'hot_wallet' })).success).toBe(false);
+    expect(
+      SignerGuardPolicySchema.safeParse(makePolicy({ signerRole: 'hot_wallet' })).success,
+    ).toBe(false);
   });
 
   it('requires non-empty chain, contract package, and token allowlists', () => {
@@ -60,10 +62,12 @@ describe('SignerGuardPolicySchema', () => {
   });
 
   it('requires atomic decimal strings for payment caps', () => {
-    expect(SignerGuardPolicySchema.safeParse(makePolicy({ maxSinglePaymentAtomic: '1.0' })).success).toBe(
+    expect(
+      SignerGuardPolicySchema.safeParse(makePolicy({ maxSinglePaymentAtomic: '1.0' })).success,
+    ).toBe(false);
+    expect(SignerGuardPolicySchema.safeParse(makePolicy({ perDayCapAtomic: '-1' })).success).toBe(
       false,
     );
-    expect(SignerGuardPolicySchema.safeParse(makePolicy({ perDayCapAtomic: '-1' })).success).toBe(false);
   });
 
   it('rejects max single payment caps above the per-day cap using BigInt scale', () => {
@@ -76,9 +80,9 @@ describe('SignerGuardPolicySchema', () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.path.join('.') === 'maxSinglePaymentAtomic')).toBe(
-        true,
-      );
+      expect(
+        result.error.issues.some((issue) => issue.path.join('.') === 'maxSinglePaymentAtomic'),
+      ).toBe(true);
     }
   });
 
