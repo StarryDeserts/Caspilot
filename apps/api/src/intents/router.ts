@@ -170,5 +170,34 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     return c.json({ id, entries });
   });
 
+  r.post('/:id/reject', async (c) => {
+    const id = c.req.param('id');
+    const entry = state.get(id);
+    if (!entry) return c.json({ error: 'not_found' }, 404);
+    const terminal: IntentState[] = ['FINALIZED', 'EXECUTION_FAILED', 'REJECTED', 'TIMEOUT'];
+    if (terminal.includes(entry.state)) {
+      return c.json({ error: 'already_terminal', state: entry.state }, 409);
+    }
+    const body = (await c.req.json().catch(() => ({}))) as { reason?: string };
+    const reason = body.reason ?? 'rejected';
+    const t = now();
+    // Release a still-open reservation so the held budget returns to the day cap.
+    // A reservation that was already committed (post-execution) stays committed:
+    // release() only flips 'reserved' rows.
+    const reservation = deps.spendLedger.findByIntentId(id);
+    if (reservation && reservation.status === 'reserved') {
+      await deps.spendLedger.release(reservation.id);
+    }
+    entry.state = 'REJECTED';
+    deps.audit.append({
+      intentId: id,
+      state: 'REJECTED',
+      atMs: t,
+      kind: 'rejected',
+      payload: { reason },
+    });
+    return c.json({ id, state: 'REJECTED', reason });
+  });
+
   return r;
 }
