@@ -29,4 +29,57 @@ describe('AuditTraceStore', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('orders by at_ms ascending, isolates by intent, and round-trips payload', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'caspilot-audit-'));
+    try {
+      const db = new Database(join(dir, 't.sqlite'));
+      db.pragma('journal_mode = WAL');
+      runAuditMigrations(db);
+      const store = new AuditTraceStore(db);
+
+      const earlierPayload = {
+        allowed: true,
+        policyDigest: 'd'.repeat(64),
+        nested: { n: 1 },
+      };
+
+      // Append A's later row first, then A's earlier row, then B's row.
+      // This makes the ascending-at_ms ordering assertion meaningful.
+      store.append({
+        intentId: 'A',
+        state: 'POLICY_VALIDATED',
+        atMs: 1_700_000_002_000,
+        kind: 'policy_check',
+        payload: { allowed: false },
+      });
+      store.append({
+        intentId: 'A',
+        state: 'POLICY_VALIDATED',
+        atMs: 1_700_000_001_000,
+        kind: 'policy_check',
+        payload: earlierPayload,
+      });
+      store.append({
+        intentId: 'B',
+        state: 'POLICY_VALIDATED',
+        atMs: 1_700_000_000_500,
+        kind: 'policy_check',
+        payload: { allowed: true },
+      });
+
+      const aRows = store.listByIntent('A');
+      // Intent isolation: only A's two rows, never B's.
+      expect(aRows).toHaveLength(2);
+      // Ascending at_ms: the smaller timestamp comes first.
+      expect(aRows[0]?.at_ms).toBe(1_700_000_001_000);
+      expect(aRows[1]?.at_ms).toBe(1_700_000_002_000);
+      // Payload round-trips losslessly (including nested structure).
+      expect(JSON.parse(aRows[0]!.payload_json)).toEqual(earlierPayload);
+
+      db.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
