@@ -15,6 +15,31 @@ describe('PlannerRedactor', () => {
     for (const k of FORBIDDEN_KEYS) {
       expect(JSON.stringify(out)).not.toMatch(new RegExp(k));
     }
+    expect(Object.keys(out as Record<string, unknown>)).not.toContain('privateKey');
+    expect(Object.keys(out as Record<string, unknown>)).not.toContain('env');
+    expect(Object.keys(out as Record<string, unknown>)).not.toContain('prompt');
+    expect(Object.keys(out as Record<string, unknown>)).not.toContain('reasoning');
+    expect((out as Record<string, unknown>).intent).toBe('optimize yield');
+  });
+
+  it('is cycle-safe (does not stack-overflow on self-reference)', () => {
+    const a: Record<string, unknown> = { intent: 'x' };
+    a.self = a;
+    let out: Record<string, unknown> | undefined;
+    expect(() => {
+      out = r.redact(a);
+    }).not.toThrow();
+    expect((out as Record<string, unknown>).self).toBe('[cycle:redacted]');
+  });
+
+  it('strips forbidden keys from class instances', () => {
+    class Planner {
+      intent = 'optimize';
+      privateKey = 'never-leak';
+    }
+    const out = r.redact({ planner: new Planner() }) as Record<string, unknown>;
+    expect(JSON.stringify(out)).not.toContain('never-leak');
+    expect(JSON.stringify(out)).toContain('optimize');
   });
 
   it('preserves structured planner output (toolCalls, constraints, policyChecks)', () => {
