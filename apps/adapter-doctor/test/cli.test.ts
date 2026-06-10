@@ -34,4 +34,20 @@ describe('adapter-doctor', () => {
     expect(report.canBoot).toBe(false);
     expect(report.reasons).toContain('chainspec_mismatch');
   });
+
+  it('returns canBoot false and db_not_ok when the db probe fails', async () => {
+    const report = await runDoctor({
+      expectedChainspec: 'casper-test',
+      probes: {
+        db: async () => ({ ok: false, reason: 'down' }),
+        chainStatus: async () => [{ name: 'casper-rpc', ok: true, chainspecName: 'casper-test' }],
+        observation: async () => ({ ok: true }),
+        strategy: async () => ({ ok: true }),
+        dex: async () => ({ ok: true }),
+        submission: async () => ({ ok: true }),
+      },
+    });
+    expect(report.canBoot).toBe(false);
+    expect(report.reasons).toContain('db_not_ok');
+  });
 });

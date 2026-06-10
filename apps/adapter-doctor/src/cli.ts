@@ -1,3 +1,5 @@
+import { realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { BootGate, CapabilityReport } from '@caspilot/adapters';
 
 export interface DoctorProbes {
@@ -24,7 +26,7 @@ export async function runDoctor(opts: { expectedChainspec: string; probes: Docto
   return { ...decision, report };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
   console.error(
     'adapter-doctor CLI: configure probes in a runner script; library mode used by tests.',
   );
