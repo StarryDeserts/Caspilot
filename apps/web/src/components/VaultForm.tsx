@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 
+const ACCOUNT_HASH = /^00[0-9a-f]{64}$/;
+
 export interface VaultFormValue {
   admin: string;
   cep18Contract: string;
@@ -15,10 +17,16 @@ export function VaultForm({ onSubmit }: { onSubmit: (v: VaultFormValue) => void 
   const [maxSingle, setMaxSingle] = useState('');
   const [daily, setDaily] = useState('');
   const [until, setUntil] = useState('');
+  const [err, setErr] = useState<string | null>(null);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!admin || !cep18 || !maxSingle || !daily || !until) return;
+    if (!ACCOUNT_HASH.test(admin)) return setErr('admin must be an account-hash hex (00<64 hex>)');
+    if (!ACCOUNT_HASH.test(cep18)) return setErr('CEP-18 contract must be an account-hash hex');
+    if (!/^\d+$/.test(maxSingle)) return setErr('max single payment must be a decimal string');
+    if (!/^\d+$/.test(daily)) return setErr('daily limit must be a decimal string');
+    if (!until) return setErr('valid until is required');
+    setErr(null);
     const validUntilMs = new Date(until + 'T00:00:00Z').getTime();
     onSubmit({ admin, cep18Contract: cep18, maxSinglePayment: maxSingle, dailyLimit: daily, validUntilMs });
   }
@@ -30,6 +38,7 @@ export function VaultForm({ onSubmit }: { onSubmit: (v: VaultFormValue) => void 
       <Field id="max" label="Max single payment" value={maxSingle} onChange={setMaxSingle} />
       <Field id="daily" label="Daily limit" value={daily} onChange={setDaily} />
       <Field id="until" label="Valid until" value={until} onChange={setUntil} type="date" />
+      {err && <p className="text-red-400 text-sm">{err}</p>}
       <button type="submit" className="bg-zinc-100 text-zinc-900 px-3 py-1 rounded">Create</button>
     </form>
   );
