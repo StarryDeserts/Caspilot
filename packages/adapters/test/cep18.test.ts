@@ -1,0 +1,30 @@
+import { describe, it, expect, vi } from 'vitest';
+import { Cep18ReadAdapter } from '../src/cep18.js';
+
+describe('Cep18ReadAdapter', () => {
+  it('balanceOf reads via state_get_dictionary_item', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          result: {
+            stored_value: {
+              CLValue: { parsed: '12345', cl_type: 'U256' },
+            },
+            merkle_proof: 'omitted',
+            api_version: '2.0.0',
+          },
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    const a = new Cep18ReadAdapter({
+      rpcUrl: 'http://node/rpc',
+      tokenHash: 'hash-' + '0'.repeat(64),
+      fetch: fetchMock,
+    });
+    const bal = await a.balanceOf('00' + '11'.repeat(32));
+    expect(bal).toBe('12345');
+  });
+});
