@@ -130,6 +130,13 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     const id = c.req.param('id');
     const entry = state.get(id);
     if (!entry) return c.json({ error: 'not_found' }, 404);
+    // Phase-4 demo fast-forward: accepting POLICY_VALIDATED here collapses the
+    // x402 payment + signing sub-protocol (PAYMENT_REQUIRED..ACCEPTED_BY_NODE)
+    // that Phase 5 will drive step-by-step. The canonical @caspilot/intent-fsm
+    // deliberately forbids this skip (see ALLOWED_TRANSITIONS / the "rejects
+    // skipping" test); the API does not claim FSM conformance for this hop, so
+    // the audit trace honestly records the jump instead of fabricating
+    // intermediate states that never happened.
     if (entry.state !== 'POLICY_VALIDATED' && entry.state !== 'ACCEPTED_BY_NODE') {
       return c.json({ error: 'invalid_state', state: entry.state }, 409);
     }

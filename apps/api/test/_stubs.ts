@@ -32,11 +32,12 @@ const stubPolicy: SignerGuardPolicy = {
   requireTraceId: false,
 };
 
-export function makeStubDeps(): StubDeps {
+export function makeStubDeps(policyOverride: Partial<SignerGuardPolicy> = {}): StubDeps {
   const handle = openSignerGuardDb();
   runAuditMigrations(handle.sqlite);
   const spendLedger = makeSpendLedger(handle.db);
   const guard = makeSignerGuard({ spendLedger, signer: stubSigner, clock: () => Date.now() });
   const audit = new AuditTraceStore(handle.sqlite);
-  return { guard, policy: stubPolicy, audit, spendLedger, cleanup: () => handle.close() };
+  const policy: SignerGuardPolicy = { ...stubPolicy, ...policyOverride };
+  return { guard, policy, audit, spendLedger, cleanup: () => handle.close() };
 }

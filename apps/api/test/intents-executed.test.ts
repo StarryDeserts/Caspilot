@@ -41,4 +41,18 @@ describe('POST /intents/:id/mark-executed', () => {
     expect(body.state).toBe('EXECUTED');
     expect(deps.spendLedger.findByIntentId(id)?.status).toBe('committed');
   });
+
+  it('returns 400 and leaves the reservation un-committed on a malformed deploy hash', async () => {
+    const app = buildApp({ env: { expectedChainspec: 'casper-test' }, deps });
+    const { id } = await create(app);
+    await app.request(`/intents/${id}/validate-policy`, { method: 'POST' });
+    const res = await app.request(`/intents/${id}/mark-executed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deployHash: 'too-short' }),
+    });
+    expect(res.status).toBe(400);
+    // Deploy-hash validation must run BEFORE the commit, so the spend stays reserved.
+    expect(deps.spendLedger.findByIntentId(id)?.status).toBe('reserved');
+  });
 });

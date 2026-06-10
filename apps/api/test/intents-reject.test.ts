@@ -41,4 +41,38 @@ describe('POST /intents/:id/reject', () => {
     expect(body.state).toBe('REJECTED');
     expect(deps.spendLedger.findByIntentId(id)?.status).toBe('released');
   });
+
+  it('keeps a committed reservation committed when rejected after execution', async () => {
+    const app = buildApp({ env: { expectedChainspec: 'casper-test' }, deps });
+    const { id } = await create(app);
+    await app.request(`/intents/${id}/validate-policy`, { method: 'POST' });
+    await app.request(`/intents/${id}/mark-executed`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ deployHash: 'a'.repeat(64) }),
+    });
+    expect(deps.spendLedger.findByIntentId(id)?.status).toBe('committed');
+    const res = await app.request(`/intents/${id}/reject`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'late_cancel' }),
+    });
+    expect(res.status).toBe(200);
+    // release() only flips 'reserved' rows, so an already-committed spend is preserved.
+    expect(deps.spendLedger.findByIntentId(id)?.status).toBe('committed');
+  });
+
+  it('rejects a DRAFT intent that has no reservation without error', async () => {
+    const app = buildApp({ env: { expectedChainspec: 'casper-test' }, deps });
+    const { id } = await create(app);
+    const res = await app.request(`/intents/${id}/reject`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'user_abort' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { state: string };
+    expect(body.state).toBe('REJECTED');
+    expect(deps.spendLedger.findByIntentId(id)).toBe(null);
+  });
 });

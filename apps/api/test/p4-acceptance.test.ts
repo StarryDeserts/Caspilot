@@ -30,7 +30,7 @@ describe('P4 acceptance', () => {
     expect(r.status).toBe(201);
   });
 
-  it('FSM is wired into router transitions', () => {
+  it('canonical intent FSM allows the first hop but forbids skipping straight to EXECUTED', () => {
     expect(canTransition('DRAFT', 'POLICY_VALIDATED')).toBe(true);
     expect(canTransition('DRAFT', 'EXECUTED')).toBe(false);
   });

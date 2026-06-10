@@ -59,4 +59,19 @@ describe('POST /intents/:id/validate-policy', () => {
     expect(body.error).toBe('invalid_state');
     expect(body.state).toBe('POLICY_VALIDATED');
   });
+
+  it('moves to REJECTED with day_cap_exceeded when a reservation would exceed the day cap', async () => {
+    const tight = makeStubDeps({ perDayCapAtomic: '900' });
+    const app = buildApp({ env: { expectedChainspec: 'casper-test' }, deps: tight });
+    const a = await create(app); // amount '500' reserves cleanly (500 <= 900)
+    const firstValidate = await app.request(`/intents/${a.id}/validate-policy`, { method: 'POST' });
+    expect(firstValidate.status).toBe(200);
+    const b = await create(app); // second 500 would make 1000 > 900
+    const res = await app.request(`/intents/${b.id}/validate-policy`, { method: 'POST' });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { state: string; code: string };
+    expect(body.state).toBe('REJECTED');
+    expect(body.code).toBe('day_cap_exceeded');
+    tight.cleanup();
+  });
 });
