@@ -3,6 +3,7 @@ import {
   makeSpendLedger,
   makeSignerGuard,
   type RawSigner,
+  type SignerGuardPolicy,
 } from '@caspilot/signer-guard';
 import { AuditTraceStore, runAuditMigrations } from '@caspilot/audit-trace';
 import type { IntentRouterDeps } from '../src/intents/router.js';
@@ -19,11 +20,23 @@ const stubSigner: RawSigner = {
   },
 };
 
+const stubPolicy: SignerGuardPolicy = {
+  signerRole: 'local_dev',
+  allowedChainIds: ['casper:casper-test'],
+  allowedContractPackages: [`00${'cc'.repeat(32)}`],
+  allowedTokens: ['cspr-test-cep18'],
+  receiverPolicy: 'allowlist',
+  allowedReceivers: [`00${'bb'.repeat(32)}`],
+  maxSinglePaymentAtomic: '500',
+  perDayCapAtomic: '100000',
+  requireTraceId: false,
+};
+
 export function makeStubDeps(): StubDeps {
   const handle = openSignerGuardDb();
   runAuditMigrations(handle.sqlite);
   const spendLedger = makeSpendLedger(handle.db);
   const guard = makeSignerGuard({ spendLedger, signer: stubSigner, clock: () => Date.now() });
   const audit = new AuditTraceStore(handle.sqlite);
-  return { guard, audit, cleanup: () => handle.close() };
+  return { guard, policy: stubPolicy, audit, cleanup: () => handle.close() };
 }
