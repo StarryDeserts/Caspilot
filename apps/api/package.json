@@ -1,0 +1,30 @@
+{
+  "name": "caspilot-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@caspilot/intent-fsm": "workspace:*",
+    "@caspilot/signer-guard": "workspace:*",
+    "@caspilot/payment-ledger": "workspace:*",
+    "@caspilot/audit-trace": "workspace:*",
+    "hono": "^4.6.3",
+    "@hono/node-server": "^1.13.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@caspilot/tsconfig": "workspace:*",
+    "@types/node": "^22",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}
