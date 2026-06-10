@@ -1,0 +1,5 @@
+{
+  "extends": "@caspilot/tsconfig/tsconfig.lib.json",
+  "compilerOptions": { "rootDir": ".", "outDir": "dist", "types": ["node"] },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}
