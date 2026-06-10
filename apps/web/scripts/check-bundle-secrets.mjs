@@ -9,11 +9,19 @@ export const FORBIDDEN_SUBSTRINGS = [
   'SEED_PHRASE',
 ];
 
+// A privileged secret NAME is only a leak when it carries a value
+// (`NAME=...` or `"NAME":...`). A bare quoted occurrence — e.g. a
+// redaction denylist that legitimately lists the keys it strips —
+// is a defense, not a leak, so it must not trip the gate.
+function assignmentRe(name) {
+  return new RegExp(`${name}["']?\\s*[:=]`);
+}
+
 export function scanFiles(files) {
   const violations = [];
   for (const f of files) {
     for (const p of FORBIDDEN_SUBSTRINGS) {
-      if (f.text.includes(p)) violations.push({ path: f.path, pattern: p });
+      if (assignmentRe(p).test(f.text)) violations.push({ path: f.path, pattern: p });
     }
   }
   return { violations };
