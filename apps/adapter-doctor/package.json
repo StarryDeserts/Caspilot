@@ -1,0 +1,23 @@
+{
+  "name": "adapter-doctor",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/cli.js",
+  "bin": { "adapter-doctor": "./dist/cli.js" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@caspilot/adapters": "workspace:*"
+  },
+  "devDependencies": {
+    "@caspilot/tsconfig": "workspace:*",
+    "@types/node": "^22",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

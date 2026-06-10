@@ -21,6 +21,25 @@ importers:
         specifier: ^1.0.39
         version: 1.0.39
 
+  apps/adapter-doctor:
+    dependencies:
+      '@caspilot/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
+    devDependencies:
+      '@caspilot/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: ^22
+        version: 22.19.20
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      vitest:
+        specifier: ^2.0.5
+        version: 2.1.9(@types/node@22.19.20)
+
   packages/adapters:
     dependencies:
       '@caspilot/x402':
