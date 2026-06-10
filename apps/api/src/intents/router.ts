@@ -53,7 +53,10 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     if (!entry) return c.json({ error: 'not_found' }, 404);
     if (entry.state !== 'DRAFT') return c.json({ error: 'invalid_state', state: entry.state }, 409);
     const t = now();
-    const req: SignRequest = {
+    // Read-only policy gate: checkPolicyRules only reads policy, traceId, and the
+    // intended* fields, so signerPk/unsignedDeploy are inert placeholders — this path
+    // never signs and never touches a real key.
+    const signReq: SignRequest = {
       policy: deps.policy,
       intentId: id,
       traceId: id,
@@ -66,7 +69,7 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
       intendedAmountAtomic: entry.body.amount,
       intendedChainId: entry.body.network,
     };
-    const denial = checkPolicyRules(req);
+    const denial = checkPolicyRules(signReq);
     if (denial) {
       entry.state = 'REJECTED';
       deps.audit.append({

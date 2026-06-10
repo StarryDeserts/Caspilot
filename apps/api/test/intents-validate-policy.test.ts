@@ -47,4 +47,16 @@ describe('POST /intents/:id/validate-policy', () => {
     expect(body.state).toBe('REJECTED');
     expect(body.code).toBe('amount_above_single_cap');
   });
+
+  it('returns 409 when the intent is no longer in DRAFT', async () => {
+    const app = buildApp({ env: { expectedChainspec: 'casper-test' }, deps });
+    const { id } = await create(app);
+    const first = await app.request(`/intents/${id}/validate-policy`, { method: 'POST' });
+    expect(first.status).toBe(200);
+    const second = await app.request(`/intents/${id}/validate-policy`, { method: 'POST' });
+    expect(second.status).toBe(409);
+    const body = (await second.json()) as { error: string; state: string };
+    expect(body.error).toBe('invalid_state');
+    expect(body.state).toBe('POLICY_VALIDATED');
+  });
 });
