@@ -24,7 +24,13 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
   const now = deps.now ?? (() => Date.now());
   const state: Map<string, { state: IntentState; body: z.infer<typeof CreateBody>; createdAtMs: number }> = new Map();
   r.post('/', async (c) => {
-    const body = CreateBody.safeParse(await c.req.json());
+    let raw: unknown;
+    try {
+      raw = await c.req.json();
+    } catch {
+      return c.json({ error: 'invalid_json' }, 400);
+    }
+    const body = CreateBody.safeParse(raw);
     if (!body.success) return c.json({ error: 'invalid_body', issues: body.error.format() }, 400);
     const id = mintIntentId();
     const t = now();

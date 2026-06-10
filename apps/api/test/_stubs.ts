@@ -1,6 +1,3 @@
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { mkdtempSync } from 'node:fs';
 import {
   openSignerGuardDb,
   makeSpendLedger,
@@ -10,6 +7,10 @@ import {
 import { AuditTraceStore, runAuditMigrations } from '@caspilot/audit-trace';
 import type { IntentRouterDeps } from '../src/intents/router.js';
 
+export interface StubDeps extends IntentRouterDeps {
+  cleanup(): void;
+}
+
 const stubSigner: RawSigner = {
   signerRole: 'local_dev',
   signerPk: `01${'ab'.repeat(32)}`,
@@ -18,12 +19,11 @@ const stubSigner: RawSigner = {
   },
 };
 
-export function makeStubDeps(): IntentRouterDeps {
-  const dir = mkdtempSync(join(tmpdir(), 'caspilot-api-'));
-  const handle = openSignerGuardDb(join(dir, 'l.sqlite'));
+export function makeStubDeps(): StubDeps {
+  const handle = openSignerGuardDb();
   runAuditMigrations(handle.sqlite);
   const spendLedger = makeSpendLedger(handle.db);
   const guard = makeSignerGuard({ spendLedger, signer: stubSigner, clock: () => Date.now() });
   const audit = new AuditTraceStore(handle.sqlite);
-  return { guard, audit };
+  return { guard, audit, cleanup: () => handle.close() };
 }
