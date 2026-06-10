@@ -3,7 +3,7 @@ import { and, eq, inArray, lte } from 'drizzle-orm';
 import type { CasperPublicKeyHex, Cep18PackageHashHex } from '@caspilot/x402';
 import type { SignerRole } from './types.js';
 import type { SignerGuardDb } from './db.js';
-import { signerSpendLedger } from './schema.js';
+import { signerSpendLedger, type SignerSpendLedgerRow } from './schema.js';
 
 export interface SpendReservation {
   signerRole: SignerRole;
@@ -24,6 +24,7 @@ export interface SpendLedger {
   commit(reservationId: string): Promise<void>;
   release(reservationId: string): Promise<void>;
   releaseExpired(nowMs: number, ttlMs: number): Promise<number>;
+  findByIntentId(intentId: string): SignerSpendLedgerRow | null;
 }
 
 // A valid atomic amount is one or more ASCII digits: no sign, no decimal
@@ -134,6 +135,13 @@ export function makeSpendLedger(db: SignerGuardDb, clock: () => number = Date.no
         )
         .run();
       return result.changes;
+    },
+
+    findByIntentId(intentId): SignerSpendLedgerRow | null {
+      return (
+        db.select().from(signerSpendLedger).where(eq(signerSpendLedger.intentId, intentId)).all()[0] ??
+        null
+      );
     },
   };
 }

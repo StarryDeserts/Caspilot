@@ -52,6 +52,7 @@ describe('SignerGuard.authorize', () => {
       commit: vi.fn(async () => {}),
       release: vi.fn(async () => {}),
       releaseExpired: vi.fn(async () => 0),
+      findByIntentId: vi.fn(() => null),
     };
     signer = {
       signerRole: 'local_dev',

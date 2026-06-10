@@ -38,5 +38,5 @@ export function makeStubDeps(): StubDeps {
   const spendLedger = makeSpendLedger(handle.db);
   const guard = makeSignerGuard({ spendLedger, signer: stubSigner, clock: () => Date.now() });
   const audit = new AuditTraceStore(handle.sqlite);
-  return { guard, policy: stubPolicy, audit, cleanup: () => handle.close() };
+  return { guard, policy: stubPolicy, audit, spendLedger, cleanup: () => handle.close() };
 }
