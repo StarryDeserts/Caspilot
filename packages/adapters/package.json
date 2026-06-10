@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@caspilot/x402": "workspace:*",
+    "casper-js-sdk": "5.0.12",
     "zod": "^3.23.8"
   },
   "devDependencies": {
