@@ -101,7 +101,11 @@ export class CasperDeployAdapter {
           finalizedHeight: info.blockHeight,
           success: !errorMessage,
         };
-        const code = errorMessage ? Number(errorMessage.match(/\d+/)?.[0]) : Number.NaN;
+        // Attribute a numeric revert code only from Casper's canonical
+        // "User error: <code>" form. A stray number in any other message must
+        // not be mislabeled — honest provenance: "reverted, code unknown" beats
+        // a lucky-match false code.
+        const code = Number(errorMessage?.match(/user error:\s*(\d+)/i)?.[1]);
         if (Number.isFinite(code)) finalization.errorCode = code;
         return finalization;
       }
@@ -125,6 +129,11 @@ export class CasperDeployAdapter {
     }
   }
 
+  // submitSignedDeploy and healthCheck broadcast/probe over this hand-rolled
+  // JSON-RPC so they move the exact bytes we validated (and return our own
+  // recomputed hash, not the node's echo). awaitDeployFinalized instead drives
+  // the SDK RpcClient (via FetchHandler) because getDeploy deserializes both the
+  // 1.x and 2.0 execution-result shapes — two transports here is deliberate.
   private async rpc<T>(method: string, params: unknown): Promise<T> {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), this.timeoutMs);

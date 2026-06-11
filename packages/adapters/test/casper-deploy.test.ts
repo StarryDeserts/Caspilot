@@ -229,6 +229,22 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
     expect(out).toEqual({ finalizedHeight: 77, success: false, errorCode: 60004 });
   });
 
+  it('does not mislabel an incidental number in a non-User-error revert as a code', async () => {
+    const env = envFixture();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        finalizedDeploy(env, { height: 88, errorMessage: 'Out of gas after 3 ticks' }),
+      );
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    // Reverted, but the code is unknown — an absent errorCode is more honest
+    // than a false one scraped from an unrelated number.
+    expect(out).toEqual({ finalizedHeight: 88, success: false });
+  });
+
   it('polls past a pending (accepted-but-not-executed) deploy until it finalizes', async () => {
     const env = envFixture();
     const fetchMock = vi
@@ -305,15 +321,13 @@ describe('CasperDeployAdapter.healthCheck', () => {
   });
 
   it('reports not-ok with the rpc reason when the node returns an error', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(
-        jsonResponse({
-          jsonrpc: '2.0',
-          id: 1,
-          error: { code: -32601, message: 'method not found' },
-        }),
-      );
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        jsonrpc: '2.0',
+        id: 1,
+        error: { code: -32601, message: 'method not found' },
+      }),
+    );
     const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
 
     expect(await adapter.healthCheck()).toEqual({ ok: false, reason: 'rpc_-32601' });
