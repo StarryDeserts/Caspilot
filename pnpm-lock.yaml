@@ -80,6 +80,31 @@ importers:
         specifier: ^2.0.5
         version: 2.1.9(@types/node@22.19.20)(jsdom@24.1.3)
 
+  apps/harness:
+    dependencies:
+      '@caspilot/adapters':
+        specifier: workspace:*
+        version: link:../../packages/adapters
+      '@caspilot/signer-guard':
+        specifier: workspace:*
+        version: link:../../packages/signer-guard
+      casper-js-sdk:
+        specifier: 5.0.12
+        version: 5.0.12
+    devDependencies:
+      '@caspilot/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: ^22
+        version: 22.19.20
+      typescript:
+        specifier: ^5.5.4
+        version: 5.5.4
+      vitest:
+        specifier: ^2.0.5
+        version: 2.1.9(@types/node@22.19.20)(jsdom@24.1.3)
+
   apps/web:
     dependencies:
       next:

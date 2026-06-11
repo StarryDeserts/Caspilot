@@ -1,0 +1,23 @@
+{
+  "name": "harness",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@caspilot/adapters": "workspace:*",
+    "@caspilot/signer-guard": "workspace:*",
+    "casper-js-sdk": "5.0.12"
+  },
+  "devDependencies": {
+    "@caspilot/tsconfig": "workspace:*",
+    "@types/node": "^22",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}
