@@ -7,16 +7,25 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy:vault": "tsx scripts/deploy-vault.ts",
+    "seed": "tsx scripts/seed-demo.ts",
+    "dump": "tsx scripts/dump-tier1-artifacts.ts",
+    "demo": "tsx scripts/run-tier1.ts"
   },
   "dependencies": {
     "@caspilot/adapters": "workspace:*",
+    "@caspilot/audit-trace": "workspace:*",
+    "@caspilot/intent-fsm": "workspace:*",
     "@caspilot/signer-guard": "workspace:*",
-    "casper-js-sdk": "5.0.12"
+    "casper-js-sdk": "5.0.12",
+    "zod": "3.23.8"
   },
   "devDependencies": {
     "@caspilot/tsconfig": "workspace:*",
     "@types/node": "^22",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.4",
     "vitest": "^2.0.5"
   }
