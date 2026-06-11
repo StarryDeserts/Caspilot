@@ -15,7 +15,7 @@ describe('TierOneArtifactsSchema', () => {
         finalizedHeight: 1_000_001,
       },
       rejections: [
-        { kind: 'receiver_not_allowed', deployHash: 'ee'.repeat(32), errorCode: 60004, finalizedHeight: 1_000_002 },
+        { kind: 'receiver_not_allowed', deployHash: 'ee'.repeat(32), errorCode: 3, finalizedHeight: 1_000_002 },
       ],
     });
     expect(ok.rejections.length).toBe(1);
