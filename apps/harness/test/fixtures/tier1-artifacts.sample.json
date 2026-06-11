@@ -1,0 +1,31 @@
+{
+  "generatedAtMs": 1700000000000,
+  "network": "casper-test",
+  "chainspec": "casper-test",
+  "vault": {
+    "contractHash": "00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "deployHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "finalizedHeight": 1000000
+  },
+  "paySuccess": {
+    "deployHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "amount": "50",
+    "receiver": "00cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "finalizedHeight": 1000001
+  },
+  "rejections": [
+    {
+      "kind": "receiver_not_allowed",
+      "deployHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "errorCode": 3,
+      "finalizedHeight": 1000002
+    },
+    {
+      "kind": "over_max_single_payment",
+      "deployHash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "errorCode": 4,
+      "finalizedHeight": 1000003
+    }
+  ],
+  "notes": "Tier-1 sample artifact: real PolicyVault deploy, one accepted pay(), two on-chain rejections (codes are PolicyVaultError discriminants)."
+}
