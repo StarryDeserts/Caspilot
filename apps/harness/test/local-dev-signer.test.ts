@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CLValue, Deploy, KeyAlgorithm, PrivateKey, PublicKey } from 'casper-js-sdk';
 import { buildContractCallDeploy } from '@caspilot/adapters';
-import { loadLocalDevSigner } from '../src/local-dev-signer.js';
+import { loadLocalDevSigner, LocalDevSignerError } from '../src/local-dev-signer.js';
 
 const FIXED_TS = 1_700_000_000_000;
 const TAGGED_ED25519_SIG = /^01[0-9a-f]{128}$/; // 65 bytes: 01 tag + 64-byte sig
@@ -98,5 +98,29 @@ describe('loadLocalDevSigner', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('loadLocalDevSigner file-only guards', () => {
+  it('refuses an inline PEM body passed where a path belongs', () => {
+    const { pem } = pemFixture();
+    expect(() => loadLocalDevSigner({ pemPath: pem })).toThrow(LocalDevSignerError);
+  });
+
+  it('refuses a relative path', () => {
+    expect(() => loadLocalDevSigner({ pemPath: 'keys/local_dev.pem', readFile: () => 'x' })).toThrow(
+      LocalDevSignerError,
+    );
+  });
+
+  it('refuses a missing file with a clear error (default disk reader)', () => {
+    expect(() => loadLocalDevSigner({ pemPath: '/nonexistent/caspilot/local_dev.pem' })).toThrow(/does not exist/);
+  });
+
+  it('does not enforce existence when a readFile override supplies the bytes', () => {
+    const { pem, pk } = pemFixture();
+    // Absolute, non-inline path that does not exist on disk: the injected
+    // reader is the data source, so the existence check must be bypassed.
+    expect(loadLocalDevSigner({ pemPath: '/unused.pem', readFile: () => pem }).signerPk).toBe(pk);
   });
 });

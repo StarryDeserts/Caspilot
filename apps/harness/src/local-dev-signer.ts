@@ -1,6 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { isAbsolute } from 'node:path';
 import { KeyAlgorithm, PrivateKey } from 'casper-js-sdk';
 import type { RawSigner, UnsignedDeployEnvelope } from '@caspilot/signer-guard';
+
+/** Raised when a signer key is referenced in an unsafe or malformed way. */
+export class LocalDevSignerError extends Error {}
 
 export interface LocalDevSignerOptions {
   /** Filesystem path to an ed25519 PEM-encoded private key. */
@@ -17,8 +21,23 @@ export interface LocalDevSignerOptions {
  * deploy hash crosses the boundary back to the SignerGuard.
  */
 export function loadLocalDevSigner(opts: LocalDevSignerOptions): RawSigner {
-  const read = opts.readFile ?? ((p: string) => readFileSync(p, 'utf8'));
-  const privateKey = PrivateKey.fromPem(read(opts.pemPath), KeyAlgorithm.ED25519);
+  const p = opts.pemPath;
+  if (!p || typeof p !== 'string') throw new LocalDevSignerError('pemPath is required');
+  // Refuse a raw key passed where a path belongs — keeps private-key bytes out
+  // of argv/process listings/logs and forbids the inline-secret anti-pattern.
+  if (p.includes('-----')) {
+    throw new LocalDevSignerError('pemPath must be a filesystem path, not an inline PEM body');
+  }
+  if (!isAbsolute(p)) throw new LocalDevSignerError(`pemPath must be an absolute path: ${p}`);
+  // Path-shape guards above always run. The existence check lives in the default
+  // disk reader so an injected reader (the test seam) remains the data source.
+  const read =
+    opts.readFile ??
+    ((path: string) => {
+      if (!existsSync(path)) throw new LocalDevSignerError(`pemPath does not exist: ${path}`);
+      return readFileSync(path, 'utf8');
+    });
+  const privateKey = PrivateKey.fromPem(read(p), KeyAlgorithm.ED25519);
   const signerPk = privateKey.publicKey.toHex(false);
 
   return {
