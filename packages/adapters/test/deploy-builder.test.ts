@@ -3,6 +3,7 @@ import { Args, CLValue, Deploy, KeyAlgorithm, PrivateKey } from 'casper-js-sdk';
 import {
   buildContractCallDeploy,
   buildVaultInstallDeploy,
+  buildVersionedContractCallDeploy,
   deployHashFromEnvelope,
 } from '../src/deploy-builder.js';
 
@@ -23,6 +24,19 @@ function contractCall(sender: string, overrides: Record<string, CLValue> = {}) {
     senderPk: sender,
     contractHash: 'a'.repeat(64),
     entryPoint: 'transfer',
+    args: { amount: CLValue.newCLUInt512(1000), memo: CLValue.newCLString('caspilot'), ...overrides },
+    paymentMotes: '3000000000',
+    timestampMs: FIXED_TS,
+  });
+}
+
+function versionedCall(sender: string, overrides: Record<string, CLValue> = {}) {
+  return buildVersionedContractCallDeploy({
+    chainName: CHAIN,
+    senderPk: sender,
+    // Odra installs expose a *package* hash; the call resolves to its latest version.
+    packageHash: 'c'.repeat(64),
+    entryPoint: 'pay',
     args: { amount: CLValue.newCLUInt512(1000), memo: CLValue.newCLString('caspilot'), ...overrides },
     paymentMotes: '3000000000',
     timestampMs: FIXED_TS,
@@ -92,6 +106,47 @@ describe('buildVaultInstallDeploy', () => {
   it('differs from a contract-call deploy built by the same sender', () => {
     const sender = senderHex();
     expect(vaultInstall(sender).bodyHashHex).not.toBe(contractCall(sender).bodyHashHex);
+  });
+});
+
+describe('buildVersionedContractCallDeploy', () => {
+  it('produces a well-formed envelope whose bodyHashHex is the deploy hash', () => {
+    const env = versionedCall(senderHex());
+
+    expect(env.bodyHashHex).toMatch(HEX64);
+    expect(env.payloadHex).toMatch(HEX64);
+    expect(typeof env.headerJson).toBe('object');
+    expect(env.bodyHashHex).not.toBe(env.payloadHex);
+  });
+
+  it('round-trips with a stored *versioned* contract session (latest version)', () => {
+    const env = versionedCall(senderHex());
+    const back = Deploy.fromJSON(env.headerJson);
+
+    expect(back.hash.toHex()).toBe(env.bodyHashHex);
+    expect(back.header.bodyHash?.toHex()).toBe(env.payloadHex);
+    // Package-hash call → versioned session, NOT a by-hash contract call.
+    expect(back.session.storedVersionedContractByHash).toBeDefined();
+    expect(back.session.storedContractByHash).toBeUndefined();
+    expect(back.session.moduleBytes).toBeUndefined();
+  });
+
+  it('is deterministic for identical inputs', () => {
+    const sender = senderHex();
+    expect(versionedCall(sender).bodyHashHex).toBe(versionedCall(sender).bodyHashHex);
+  });
+
+  it('changes the deploy hash when an argument changes', () => {
+    const sender = senderHex();
+    const a = versionedCall(sender, { amount: CLValue.newCLUInt512(1000) });
+    const b = versionedCall(sender, { amount: CLValue.newCLUInt512(2000) });
+    expect(a.bodyHashHex).not.toBe(b.bodyHashHex);
+  });
+
+  it('differs from a by-hash contract-call deploy built by the same sender', () => {
+    const sender = senderHex();
+    // Same entry point/args but a versioned session must serialize differently.
+    expect(versionedCall(sender).bodyHashHex).not.toBe(contractCall(sender).bodyHashHex);
   });
 });
 

@@ -7,6 +7,7 @@ import {
   ExecutableDeployItem,
   PublicKey,
   StoredContractByHash,
+  StoredVersionedContractByHash,
   Timestamp,
   type CLValue,
 } from 'casper-js-sdk';
@@ -32,6 +33,13 @@ interface DeployCommon {
 export interface BuildContractCallParams extends DeployCommon {
   /** Target contract hash (64 hex chars, no prefix). */
   contractHash: string;
+  entryPoint: string;
+  args: Record<string, CLValue>;
+}
+
+export interface BuildVersionedContractCallParams extends DeployCommon {
+  /** Target contract *package* hash (64 hex chars, no prefix). */
+  packageHash: string;
   entryPoint: string;
   args: Record<string, CLValue>;
 }
@@ -72,6 +80,27 @@ export function buildContractCallDeploy(p: BuildContractCallParams): UnsignedDep
   const session = new ExecutableDeployItem();
   session.storedContractByHash = new StoredContractByHash(
     ContractHash.newContract(p.contractHash),
+    p.entryPoint,
+    Args.fromMap(p.args),
+  );
+  const deploy = Deploy.makeDeploy(
+    makeHeader(p),
+    ExecutableDeployItem.standardPayment(p.paymentMotes),
+    session,
+  );
+  return toEnvelope(deploy);
+}
+
+// Odra installs publish a contract *package*; calls resolve to the latest
+// enabled version. The recovered hash is therefore a package hash, so the demo
+// dispatches every PolicyVault/CEP-18 entry point through this versioned form
+// (omitting the version argument selects the latest).
+export function buildVersionedContractCallDeploy(
+  p: BuildVersionedContractCallParams,
+): UnsignedDeployEnvelope {
+  const session = new ExecutableDeployItem();
+  session.storedVersionedContractByHash = new StoredVersionedContractByHash(
+    ContractHash.newContract(p.packageHash),
     p.entryPoint,
     Args.fromMap(p.args),
   );
