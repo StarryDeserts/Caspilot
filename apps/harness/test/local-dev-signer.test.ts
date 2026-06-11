@@ -124,3 +124,55 @@ describe('loadLocalDevSigner file-only guards', () => {
     expect(loadLocalDevSigner({ pemPath: '/unused.pem', readFile: () => pem }).signerPk).toBe(pk);
   });
 });
+
+describe('loadLocalDevSigner (secp256k1)', () => {
+  // 65 bytes on the wire: 02 secp256k1 tag + 64-byte ECDSA signature.
+  const TAGGED_SECP_SIG = /^02[0-9a-f]{128}$/;
+
+  function secpFixture(): { pem: string; pk: string } {
+    const sk = PrivateKey.generate(KeyAlgorithm.SECP256K1);
+    return { pem: sk.toPem(), pk: sk.publicKey.toHex(false) };
+  }
+
+  it('derives the 02-tagged secp256k1 public key when algorithm=SECP256K1', () => {
+    const { pem, pk } = secpFixture();
+    const signer = loadLocalDevSigner({
+      pemPath: '/unused.pem',
+      readFile: () => pem,
+      algorithm: KeyAlgorithm.SECP256K1,
+    });
+    expect(signer.signerRole).toBe('local_dev');
+    expect(signer.signerPk).toBe(pk);
+    expect(signer.signerPk).toMatch(/^02[0-9a-f]+$/);
+  });
+
+  it('signs the deploy hash into a tagged secp256k1 signature Deploy.validate() accepts', async () => {
+    const { pem, pk } = secpFixture();
+    const signer = loadLocalDevSigner({
+      pemPath: '/unused.pem',
+      readFile: () => pem,
+      algorithm: KeyAlgorithm.SECP256K1,
+    });
+    const env = envelopeFor(pk);
+
+    const { signatureHex } = await signer.sign(env);
+    expect(signatureHex).toMatch(TAGGED_SECP_SIG);
+
+    // Same reattach path submitSignedDeploy takes — proves the tag/length are
+    // exactly what Deploy.setSignature/validate() expect for secp256k1.
+    const deploy = Deploy.setSignature(
+      Deploy.fromJSON(env.headerJson),
+      Buffer.from(signatureHex, 'hex'),
+      PublicKey.fromHex(signer.signerPk),
+    );
+    expect(validates(deploy)).toBe(true);
+    expect(deploy.approvals).toHaveLength(1);
+  });
+
+  it('still defaults to ed25519 when no algorithm is given', () => {
+    const sk = PrivateKey.generate(KeyAlgorithm.ED25519);
+    const signer = loadLocalDevSigner({ pemPath: '/unused.pem', readFile: () => sk.toPem() });
+    expect(signer.signerPk).toBe(sk.publicKey.toHex(false));
+    expect(signer.signerPk).toMatch(/^01[0-9a-f]{64}$/);
+  });
+});

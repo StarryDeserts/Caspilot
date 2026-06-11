@@ -7,8 +7,14 @@ import type { RawSigner, UnsignedDeployEnvelope } from '@caspilot/signer-guard';
 export class LocalDevSignerError extends Error {}
 
 export interface LocalDevSignerOptions {
-  /** Filesystem path to an ed25519 PEM-encoded private key. */
+  /** Filesystem path to a PEM-encoded private key. */
   pemPath: string;
+  /**
+   * PEM key algorithm. Defaults to ed25519. Set SECP256K1 for SEC1/secp keys —
+   * casper-js-sdk has separate per-algorithm parsers, so the caller must declare
+   * which one the PEM holds (the funded casper-test signer is secp256k1).
+   */
+  algorithm?: KeyAlgorithm;
   /** Injectable reader for tests; defaults to fs.readFileSync(path, 'utf8'). */
   readFile?: (path: string) => string;
 }
@@ -37,7 +43,7 @@ export function loadLocalDevSigner(opts: LocalDevSignerOptions): RawSigner {
       if (!existsSync(path)) throw new LocalDevSignerError(`pemPath does not exist: ${path}`);
       return readFileSync(path, 'utf8');
     });
-  const privateKey = PrivateKey.fromPem(read(p), KeyAlgorithm.ED25519);
+  const privateKey = PrivateKey.fromPem(read(p), opts.algorithm ?? KeyAlgorithm.ED25519);
   const signerPk = privateKey.publicKey.toHex(false);
 
   return {
