@@ -134,6 +134,9 @@ importers:
 
   packages/adapters:
     dependencies:
+      '@caspilot/signer-guard':
+        specifier: workspace:*
+        version: link:../signer-guard
       '@caspilot/x402':
         specifier: workspace:*
         version: link:../x402-gateway
