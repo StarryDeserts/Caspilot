@@ -110,6 +110,21 @@ export class CasperDeployAdapter {
     throw new Error('deploy_not_finalized');
   }
 
+  /**
+   * Read-only liveness probe backing the `submission` capability slot. Confirms
+   * the node we would broadcast to is reachable over the exact transport submit
+   * uses — via info_get_status, never account_put_deploy — so a health check can
+   * never put a deploy on chain.
+   */
+  async healthCheck(): Promise<{ ok: true } | { ok: false; reason: string }> {
+    try {
+      await this.rpc('info_get_status', []);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
   private async rpc<T>(method: string, params: unknown): Promise<T> {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), this.timeoutMs);

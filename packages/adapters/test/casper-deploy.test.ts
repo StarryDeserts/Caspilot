@@ -277,3 +277,45 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
     expect(sleep).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('CasperDeployAdapter.healthCheck', () => {
+  it('confirms write-path liveness via a read-only info_get_status (never a broadcast)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: 1, result: { api_version: '2.0.0' } }));
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.healthCheck();
+
+    expect(out).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // The crux: a health check must probe, never put a deploy on chain.
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe(RPC_URL);
+    const sent = JSON.parse((init as RequestInit).body as string);
+    expect(sent.method).toBe('info_get_status');
+    expect(sent.method).not.toBe('account_put_deploy');
+  });
+
+  it('reports not-ok with the http reason when the node is unreachable', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('down', { status: 503 }));
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    expect(await adapter.healthCheck()).toEqual({ ok: false, reason: 'http_503' });
+  });
+
+  it('reports not-ok with the rpc reason when the node returns an error', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({
+          jsonrpc: '2.0',
+          id: 1,
+          error: { code: -32601, message: 'method not found' },
+        }),
+      );
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    expect(await adapter.healthCheck()).toEqual({ ok: false, reason: 'rpc_-32601' });
+  });
+});
