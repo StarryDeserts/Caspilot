@@ -41,15 +41,87 @@ function signedFixture(amount = 1000) {
   return { env, signerPk, signatureHex: Buffer.from(tagged).toString('hex') };
 }
 
+type Envelope = ReturnType<typeof buildContractCallDeploy>;
+
+// An offline envelope only — the observe path never signs.
+function envFixture(amount = 1000): Envelope {
+  const sk = PrivateKey.generate(KeyAlgorithm.ED25519);
+  return buildContractCallDeploy({
+    chainName: 'casper-test',
+    senderPk: sk.publicKey.toHex(false),
+    contractHash: 'a'.repeat(64),
+    entryPoint: 'transfer',
+    args: { amount: CLValue.newCLUInt512(amount) },
+    paymentMotes: '3000000000',
+    timestampMs: FIXED_TS,
+  });
+}
+
+// A Casper 2.0 (Condor) info_get_deploy result with execution_info present.
+// A null error_message is a successful execution; a "User error: <code>"
+// string is a revert carrying the contract's numeric code.
+function finalizedDeploy(env: Envelope, opts: { height: number; errorMessage?: string }): Response {
+  return jsonResponse({
+    jsonrpc: '2.0',
+    id: '1',
+    result: {
+      api_version: '2.0.0',
+      deploy: env.headerJson,
+      execution_info: {
+        block_hash: 'b'.repeat(64),
+        block_height: opts.height,
+        execution_result: {
+          Version2: {
+            initiator: { AccountHash: 'account-hash-' + 'c'.repeat(64) },
+            error_message: opts.errorMessage ?? null,
+            limit: '1',
+            consumed: '1',
+            refund: '0',
+            current_price: 1,
+            cost: '1',
+            transfers: [],
+            size_estimate: 1,
+            effects: [],
+          },
+        },
+      },
+    },
+  });
+}
+
+// The node has accepted the deploy but not yet executed it.
+function pendingDeploy(env: Envelope): Response {
+  return jsonResponse({
+    jsonrpc: '2.0',
+    id: '1',
+    result: { api_version: '2.0.0', deploy: env.headerJson, execution_info: null },
+  });
+}
+
+// The node does not yet know this deploy (propagation window): a JSON-RPC error.
+function unknownDeploy(): Response {
+  return jsonResponse({
+    jsonrpc: '2.0',
+    id: '1',
+    error: { code: -32000, message: 'No such deploy' },
+  });
+}
+
 describe('CasperDeployAdapter.submitSignedDeploy', () => {
   it('reattaches the signature and broadcasts a deploy that validates over its own hash', async () => {
     const { env, signerPk, signatureHex } = signedFixture();
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: 1, result: { deploy_hash: env.bodyHashHex } }));
+      .mockResolvedValue(
+        jsonResponse({ jsonrpc: '2.0', id: 1, result: { deploy_hash: env.bodyHashHex } }),
+      );
     const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
 
-    const { deployHash } = await adapter.submitSignedDeploy({ envelope: env, signatureHex, signerPk });
+    const { deployHash } = await adapter.submitSignedDeploy({
+      envelope: env,
+      signatureHex,
+      signerPk,
+    });
 
     // We return the locally-recomputed hash, not the node's echo.
     expect(deployHash).toBe(env.bodyHashHex);
@@ -112,11 +184,96 @@ describe('CasperDeployAdapter.submitSignedDeploy', () => {
     const { env, signerPk, signatureHex } = signedFixture();
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: 1, error: { code: -32602, message: 'invalid' } }));
+      .mockResolvedValue(
+        jsonResponse({ jsonrpc: '2.0', id: 1, error: { code: -32602, message: 'invalid' } }),
+      );
     const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
 
     await expect(
       adapter.submitSignedDeploy({ envelope: env, signatureHex, signerPk }),
     ).rejects.toThrow('rpc_-32602');
+  });
+});
+
+describe('CasperDeployAdapter.awaitDeployFinalized', () => {
+  const NOOP_SLEEP = async () => {};
+
+  it('returns the finalized height for a successful execution', async () => {
+    const env = envFixture();
+    const fetchMock = vi.fn().mockResolvedValue(finalizedDeploy(env, { height: 4242 }));
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    // Success carries no errorCode at all (not an undefined key).
+    expect(out).toEqual({ finalizedHeight: 4242, success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // It asked info_get_deploy for exactly this hash.
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe(RPC_URL);
+    const sent = JSON.parse((init as RequestInit).body as string);
+    expect(sent.method).toBe('info_get_deploy');
+    expect(sent.params.deploy_hash).toBe(env.bodyHashHex);
+  });
+
+  it('reports success=false and the numeric error code for a reverted execution', async () => {
+    const env = envFixture();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(finalizedDeploy(env, { height: 77, errorMessage: 'User error: 60004' }));
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    expect(out).toEqual({ finalizedHeight: 77, success: false, errorCode: 60004 });
+  });
+
+  it('polls past a pending (accepted-but-not-executed) deploy until it finalizes', async () => {
+    const env = envFixture();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(pendingDeploy(env))
+      .mockResolvedValueOnce(finalizedDeploy(env, { height: 9000 }));
+    const sleep = vi.fn(async () => {});
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, {
+      sleep,
+      pollIntervalMs: 1234,
+    });
+
+    expect(out).toEqual({ finalizedHeight: 9000, success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(sleep).toHaveBeenCalledWith(1234);
+  });
+
+  it('retries through the propagation window where the node does not yet know the deploy', async () => {
+    const env = envFixture();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(unknownDeploy())
+      .mockResolvedValueOnce(finalizedDeploy(env, { height: 5 }));
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    expect(out).toEqual({ finalizedHeight: 5, success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws deploy_not_finalized after exhausting the attempt budget', async () => {
+    const env = envFixture();
+    const fetchMock = vi.fn().mockImplementation(() => pendingDeploy(env));
+    const sleep = vi.fn(async () => {});
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    await expect(
+      adapter.awaitDeployFinalized(env.bodyHashHex, { sleep, maxAttempts: 3 }),
+    ).rejects.toThrow('deploy_not_finalized');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // Sleeps between attempts only — never after the final one.
+    expect(sleep).toHaveBeenCalledTimes(2);
   });
 });
