@@ -1,13 +1,6 @@
-import {
-  Deploy,
-  PublicKey,
-  RpcClient,
-  RpcError,
-  RpcResponse,
-  type IHandler,
-  type RpcRequest,
-} from 'casper-js-sdk';
+import { Deploy, PublicKey, RpcClient } from 'casper-js-sdk';
 import type { UnsignedDeployEnvelope } from '@caspilot/signer-guard';
+import { FetchHandler } from './rpc-fetch-handler.js';
 
 export interface CasperDeployOptions {
   url: string;
@@ -180,47 +173,5 @@ function reconstructValidated(input: SubmitSignedDeployInput): Deploy {
     return signed;
   } catch {
     throw new Error('deploy_validation_failed');
-  }
-}
-
-/**
- * Drives the SDK's `RpcClient` over our injected fetch. The client builds the
- * typed request and deserializes both Casper 1.x (`execution_results`) and
- * 2.0 (`execution_info`) result shapes; we only move bytes and surface errors.
- */
-class FetchHandler implements IHandler {
-  constructor(
-    private readonly url: string,
-    private readonly fetchImpl: typeof fetch,
-    private readonly timeoutMs: number,
-  ) {}
-
-  async processCall(req: RpcRequest): Promise<RpcResponse> {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), this.timeoutMs);
-    try {
-      const res = await this.fetchImpl(this.url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(req),
-        signal: ctl.signal,
-      });
-      if (!res.ok) throw new Error(`http_${res.status}`);
-      const json = (await res.json()) as {
-        jsonrpc?: string;
-        result?: unknown;
-        error?: { code: number; message: string };
-      };
-      const out = new RpcResponse();
-      out.version = json.jsonrpc ?? '2.0';
-      if (req.id !== undefined) out.id = req.id;
-      out.result = json.result;
-      // A present `error` makes RpcClient.getDeploy throw — exactly the signal
-      // awaitDeployFinalized treats as the propagation window.
-      if (json.error) out.error = new RpcError(json.error.code, json.error.message);
-      return out;
-    } finally {
-      clearTimeout(t);
-    }
   }
 }
