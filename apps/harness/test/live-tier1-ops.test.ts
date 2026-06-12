@@ -9,6 +9,7 @@ import {
   deriveAgentKey,
   keyStringFromTaggedAddress,
   contractKeyString,
+  odraInstallArgs,
   type Tier1Broadcaster,
   type Tier1DeployBuilder,
   type Tier1LiveDeps,
@@ -34,6 +35,8 @@ interface BuildCall {
   packageHash?: string;
   entryPoint?: string;
   argNames: string[];
+  /** For installs: the Odra package-hash key-name value, so the test can pin it to the recovery name. */
+  keyName?: string;
 }
 
 interface SubmitCall {
@@ -50,7 +53,10 @@ function recordingBuild(calls: BuildCall[]): Tier1DeployBuilder {
   let n = 0;
   return {
     installModule({ wasm, args }) {
-      calls.push({ kind: 'installModule', wasm, argNames: Object.keys(args) });
+      const call: BuildCall = { kind: 'installModule', wasm, argNames: Object.keys(args) };
+      const keyArg = args.odra_cfg_package_hash_key_name;
+      if (keyArg) call.keyName = keyArg.toString();
+      calls.push(call);
       return envFor(`im-${n++}`);
     },
     versionedCall({ packageHash, entryPoint, args }) {
@@ -149,7 +155,18 @@ describe('buildLiveTier1Ops dispatch + wiring', () => {
     expect(h.builds[0]).toMatchObject({
       kind: 'installModule',
       wasm: new Uint8Array([1, 2, 3]),
-      argNames: ['name', 'symbol', 'decimals', 'total_supply'],
+      // Odra ModuleBytes install requires the three cfg args ahead of the ctor args;
+      // the package-hash key-name must equal the name recoverPackageHash later looks up.
+      argNames: [
+        'odra_cfg_is_upgradable',
+        'odra_cfg_allow_key_override',
+        'odra_cfg_package_hash_key_name',
+        'name',
+        'symbol',
+        'decimals',
+        'total_supply',
+      ],
+      keyName: 'Cep18',
     });
     // The dispatch threads the built envelope through sign → submit → await.
     expect(h.signer.sign).toHaveBeenCalledTimes(1);
@@ -172,7 +189,16 @@ describe('buildLiveTier1Ops dispatch + wiring', () => {
     expect(h.builds[0]).toMatchObject({
       kind: 'installModule',
       wasm: new Uint8Array([4, 5, 6]),
-      argNames: ['token_package', 'max_single', 'daily_limit', 'valid_until_ms'],
+      argNames: [
+        'odra_cfg_is_upgradable',
+        'odra_cfg_allow_key_override',
+        'odra_cfg_package_hash_key_name',
+        'token_package',
+        'max_single',
+        'daily_limit',
+        'valid_until_ms',
+      ],
+      keyName: 'PolicyVault',
     });
   });
 
@@ -260,6 +286,33 @@ describe('live-tier1-ops pure address helpers', () => {
 
   it('renders a bare contract/package hash as a hash- key', () => {
     expect(contractKeyString(VAULT_ENTITY)).toBe(`hash-${VAULT_ENTITY}`);
+  });
+});
+
+describe('odraInstallArgs (Odra ModuleBytes cfg args)', () => {
+  it('prepends the three odra_cfg_* args before the ctor args, with the given key-name', () => {
+    const args = odraInstallArgs('PolicyVault', {
+      token_package: CLValue.newCLUInt256('1'),
+      max_single: CLValue.newCLUInt256('2'),
+    });
+    expect(Object.keys(args)).toEqual([
+      'odra_cfg_is_upgradable',
+      'odra_cfg_allow_key_override',
+      'odra_cfg_package_hash_key_name',
+      'token_package',
+      'max_single',
+    ]);
+    // Locked (not upgradable) + override allowed so a re-run installs a fresh package
+    // under the same named key rather than reverting as already-installed.
+    expect(args.odra_cfg_is_upgradable?.toString()).toBe('false');
+    expect(args.odra_cfg_allow_key_override?.toString()).toBe('true');
+    expect(args.odra_cfg_package_hash_key_name?.toString()).toBe('PolicyVault');
+  });
+
+  it('does not let ctor args override the cfg args it injects', () => {
+    // A ctor arg colliding with a cfg name must not silently flip install behavior.
+    const args = odraInstallArgs('Cep18', { odra_cfg_is_upgradable: CLValue.newCLValueBool(true) });
+    expect(args.odra_cfg_is_upgradable?.toString()).toBe('false');
   });
 });
 

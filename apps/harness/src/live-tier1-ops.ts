@@ -86,6 +86,35 @@ export function contractKeyString(hex: string): string {
   return `hash-${hex}`;
 }
 
+/**
+ * Wrap an Odra contract's `init` args with the three config args every Odra
+ * ModuleBytes install consumes (proven against odra-core 2.0 `install_contract`):
+ * `odra_cfg_is_upgradable` (false → a locked contract), `odra_cfg_allow_key_override`
+ * (true → a re-run installs a fresh package under the same named key instead of
+ * reverting as already-installed), and `odra_cfg_package_hash_key_name`, which is
+ * the *literal* deployer named key the package hash lands under — so it must equal
+ * the name {@link recoverPackageHash} later looks up. Without these three the install
+ * reverts before `init`, so they are non-optional, not a default.
+ *
+ * The cfg names are a reserved namespace: a colliding ctor arg is dropped rather
+ * than allowed to flip install behavior.
+ */
+export function odraInstallArgs(
+  packageKeyName: string,
+  initArgs: Record<string, CLValue>,
+): Record<string, CLValue> {
+  const merged: Record<string, CLValue> = {
+    odra_cfg_is_upgradable: CLValue.newCLValueBool(false),
+    odra_cfg_allow_key_override: CLValue.newCLValueBool(true),
+    odra_cfg_package_hash_key_name: CLValue.newCLString(packageKeyName),
+  };
+  for (const [name, value] of Object.entries(initArgs)) {
+    if (name in merged) continue;
+    merged[name] = value;
+  }
+  return merged;
+}
+
 /** A deterministic 32-byte nonce binding a payment to its receiver + amount. */
 function payloadHash(receiver: string, amount: string): Uint8Array {
   return createHash('sha256').update(receiver).update(':').update(amount).digest();
@@ -155,7 +184,10 @@ export function buildLiveTier1Ops(deps: Tier1LiveDeps): Tier1ChainOps {
   return {
     installCep18() {
       return dispatch(
-        deps.build.installModule({ wasm: deps.cep18.wasm, args: deps.cep18.installArgs }),
+        deps.build.installModule({
+          wasm: deps.cep18.wasm,
+          args: odraInstallArgs('Cep18', deps.cep18.installArgs),
+        }),
       );
     },
 
@@ -167,12 +199,12 @@ export function buildLiveTier1Ops(deps: Tier1LiveDeps): Tier1ChainOps {
       return dispatch(
         deps.build.installModule({
           wasm: deps.vault.wasm,
-          args: {
+          args: odraInstallArgs('PolicyVault', {
             token_package: CLValue.newCLKey(Key.newKey(contractKeyString(cep18PackageHash))),
             max_single: CLValue.newCLUInt256(deps.vault.maxSingle),
             daily_limit: CLValue.newCLUInt256(deps.vault.dailyLimit),
             valid_until_ms: CLValue.newCLUint64(deps.vault.validUntilMs),
-          },
+          }),
         }),
       );
     },
