@@ -7,7 +7,7 @@ describe('TierOneArtifactsSchema', () => {
       generatedAtMs: Date.now(),
       network: 'casper-test',
       chainspec: 'casper-test',
-      vault: { contractHash: `00${'aa'.repeat(32)}`, deployHash: 'bb'.repeat(32), finalizedHeight: 1_000_000 },
+      vault: { contractHash: 'aa'.repeat(32), deployHash: 'bb'.repeat(32), finalizedHeight: 1_000_000 },
       paySuccess: {
         deployHash: 'cc'.repeat(32),
         amount: '100',
@@ -27,7 +27,7 @@ describe('TierOneArtifactsSchema', () => {
         generatedAtMs: 0,
         network: 'casper-test',
         chainspec: 'casper-test',
-        vault: { contractHash: `00${'aa'.repeat(32)}`, deployHash: 'bb'.repeat(32), finalizedHeight: 1 },
+        vault: { contractHash: 'aa'.repeat(32), deployHash: 'bb'.repeat(32), finalizedHeight: 1 },
         paySuccess: { deployHash: 'cc'.repeat(32), amount: '1', receiver: `00${'dd'.repeat(32)}`, finalizedHeight: 2 },
         rejections: [],
       }),

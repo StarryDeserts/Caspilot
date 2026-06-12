@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { assembleTier1Artifacts } from '../scripts/dump-tier1-artifacts.js';
 import { TierOneArtifactsSchema } from '../src/schema.js';
 
-const VAULT = { contractHash: `00${'aa'.repeat(32)}`, deployHash: 'bb'.repeat(32), finalizedHeight: 1 };
+const VAULT = { contractHash: 'aa'.repeat(32), deployHash: 'bb'.repeat(32), finalizedHeight: 1 };
 const PAY = { deployHash: 'cc'.repeat(32), amount: '50', receiver: `00${'cc'.repeat(32)}`, finalizedHeight: 2 };
 
 describe('assembleTier1Artifacts', () => {

@@ -4,7 +4,10 @@ const Hex32 = z.string().regex(/^[0-9a-f]{64}$/);
 const AccountHashHex = z.string().regex(/^00[0-9a-f]{64}$/);
 
 export const VaultArtifact = z.object({
-  contractHash: AccountHashHex,
+  // Odra's `latestPackageEntityHash` yields a bare 32-byte hash (no account-hash
+  // `00` tag), so the deployed vault's identity is a plain 64-hex hash, not an
+  // account hash like the payment receiver below.
+  contractHash: Hex32,
   deployHash: Hex32,
   finalizedHeight: z.number().int().nonnegative(),
 });

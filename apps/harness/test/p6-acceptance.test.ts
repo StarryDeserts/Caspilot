@@ -9,7 +9,7 @@ const load = () => JSON.parse(readFileSync(samplePath, 'utf8'));
 describe('P6 acceptance', () => {
   it('sample tier1-artifacts.json validates against TierOneArtifactsSchema', () => {
     const parsed = TierOneArtifactsSchema.parse(load());
-    expect(parsed.vault.contractHash.startsWith('00')).toBe(true);
+    expect(/^[0-9a-f]{64}$/.test(parsed.vault.contractHash)).toBe(true);
     expect(parsed.rejections.some((r) => r.kind === 'receiver_not_allowed')).toBe(true);
     expect(parsed.paySuccess.finalizedHeight).toBeGreaterThan(0);
   });
