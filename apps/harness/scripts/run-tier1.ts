@@ -2,6 +2,7 @@ import { type DeployVaultPlan, buildDeployVaultPlan } from './deploy-vault.js';
 import { buildSeedPlan } from './seed-demo.js';
 import { type PaySuccessPlan, planTier1PaySuccess } from '../src/tier1-pay.js';
 import { type RejectionPlan, planTier1Rejection } from '../src/tier1-rejection.js';
+import type { Tier1OrchestrationInput, Tier1RejectionInput } from '../src/orchestrate-tier1.js';
 
 export type RunTier1StepName =
   | 'deploy-vault'
@@ -27,7 +28,9 @@ export interface RunTier1Plan {
  * exact preview of what the real run would broadcast. Each sub-plan re-applies
  * the vault's guards, so an impossible demo config fails here, before any deploy.
  */
-export function buildRunTier1Plan(input: { env: Record<string, string | undefined> }): RunTier1Plan {
+export function buildRunTier1Plan(input: {
+  env: Record<string, string | undefined>;
+}): RunTier1Plan {
   const e = input.env;
   const deploy = buildDeployVaultPlan({ env: e, now: () => Date.now() });
   const seed = buildSeedPlan({ env: e });
@@ -66,6 +69,43 @@ export function buildRunTier1Plan(input: { env: Record<string, string | undefine
       { name: 'rejection-receiver-not-allowed', payload: rejReceiver },
       { name: 'rejection-over-max-single-payment', payload: rejBudget },
     ],
+  };
+}
+
+/**
+ * Projects a {@link RunTier1Plan} into the {@link Tier1OrchestrationInput} the
+ * orchestrator consumes. The plan already pre-flighted every guard; this only
+ * picks out the receiver/amount/expected-code facts the on-chain sequence needs.
+ *
+ * Funding equals the accepted amount: only the accepted pay reaches the vault's
+ * balance check, so the two rejections (which revert earlier) need no funding.
+ */
+export function tier1InputFromPlan(plan: RunTier1Plan): Tier1OrchestrationInput {
+  const payStep = plan.steps.find((s) => s.name === 'pay-success');
+  if (!payStep) throw new Error('plan is missing the pay-success step');
+  // Step name is the authoritative discriminator set by buildRunTier1Plan.
+  const pay = payStep.payload as PaySuccessPlan;
+
+  const rejections: Tier1RejectionInput[] = plan.steps
+    .filter(
+      (s) =>
+        s.name === 'rejection-receiver-not-allowed' ||
+        s.name === 'rejection-over-max-single-payment',
+    )
+    .map((s) => {
+      const r = s.payload as RejectionPlan;
+      return {
+        kind: r.kind,
+        receiver: r.receiver,
+        amount: r.amount,
+        expectedErrorCode: r.expectedErrorCode,
+      };
+    });
+
+  return {
+    paySuccess: { receiver: pay.receiver, amount: pay.amount },
+    rejections,
+    fundAmount: pay.amount,
   };
 }
 
