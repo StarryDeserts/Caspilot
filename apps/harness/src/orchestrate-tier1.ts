@@ -10,8 +10,12 @@
  * wired by `scripts/run-tier1.ts`.
  *
  * The recovered hashes thread forward exactly as Odra requires: the CEP-18 and
- * PolicyVault *package* hashes drive every versioned entry-point call, while the
- * vault *contract* (entity) hash is what funding and the sealed artifact need.
+ * PolicyVault *package* hashes drive every versioned entry-point call — including
+ * funding, because the vault reads its own CEP-18 balance keyed by its package
+ * hash (Odra's `self_address()` resolves a contract caller to `Address::Contract`,
+ * i.e. `Key::Hash(<vaultPackageHash>)`), so the transfer recipient must be that
+ * package hash. The vault *contract* (entity) hash is recorded only as the sealed
+ * artifact's on-chain identity.
  */
 
 /** Discriminants the PolicyVault contract reverts with, keyed by rejection kind. */
@@ -62,7 +66,7 @@ export interface Tier1ChainOps {
   allowReceiver(input: { vaultPackageHash: string; receiver: string }): Promise<StepOutcome>;
   fundVault(input: {
     cep18PackageHash: string;
-    vaultContractHash: string;
+    vaultPackageHash: string;
     amount: string;
   }): Promise<StepOutcome>;
   pay(input: { vaultPackageHash: string; receiver: string; amount: string }): Promise<StepOutcome>;
@@ -110,7 +114,7 @@ export async function orchestrateTier1(
   assertSetupSuccess('allow_receiver', await ops.allowReceiver({ vaultPackageHash, receiver }));
   assertSetupSuccess(
     'fund_vault',
-    await ops.fundVault({ cep18PackageHash, vaultContractHash, amount: input.fundAmount }),
+    await ops.fundVault({ cep18PackageHash, vaultPackageHash, amount: input.fundAmount }),
   );
 
   // 4. The accepted payment must land; a revert here means a broken demo, never

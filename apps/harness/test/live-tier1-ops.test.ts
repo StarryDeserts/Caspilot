@@ -231,11 +231,11 @@ describe('buildLiveTier1Ops dispatch + wiring', () => {
     });
   });
 
-  it('fundVault calls CEP-18 transfer on the token package, recipient = the vault entity', async () => {
+  it('fundVault calls CEP-18 transfer on the token package, recipient = the vault package', async () => {
     const h = harness();
     await h.ops.fundVault({
       cep18PackageHash: CEP18_PKG,
-      vaultContractHash: VAULT_ENTITY,
+      vaultPackageHash: VAULT_PKG,
       amount: '50',
     });
     expect(h.builds[0]).toEqual({

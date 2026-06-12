@@ -233,13 +233,15 @@ export function buildLiveTier1Ops(deps: Tier1LiveDeps): Tier1ChainOps {
       );
     },
 
-    fundVault({ cep18PackageHash, vaultContractHash, amount }) {
+    fundVault({ cep18PackageHash, vaultPackageHash, amount }) {
       return dispatch(
         deps.build.versionedCall({
           packageHash: cep18PackageHash,
           entryPoint: 'transfer',
           args: {
-            recipient: CLValue.newCLKey(Key.newKey(contractKeyString(vaultContractHash))),
+            // The vault reads its balance keyed by its package hash, so fund the
+            // package hash (hash-<vaultPackageHash>), not the entity hash.
+            recipient: CLValue.newCLKey(Key.newKey(contractKeyString(vaultPackageHash))),
             amount: CLValue.newCLUInt256(amount),
           },
         }),

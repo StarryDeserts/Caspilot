@@ -12,7 +12,10 @@ import {
 
 const CEP18_PKG = 'a'.repeat(64);
 const VAULT_PKG = 'b'.repeat(64);
-const VAULT_CONTRACT = `00${'c'.repeat(64)}`;
+// The recovered vault entity hash is a bare 64-hex (Odra's latestPackageEntityHash),
+// distinct from the account-hash receiver below — it is recorded only as the vault's
+// sealed artifact identity, never as a funding/call target.
+const VAULT_CONTRACT = 'f'.repeat(64);
 const VAULT_DEPLOY = 'd'.repeat(64);
 const PAY_DEPLOY = 'e'.repeat(64);
 const REJ3_DEPLOY = '3'.repeat(64);
@@ -163,7 +166,7 @@ describe('orchestrateTier1', () => {
     });
     expect(calls).toContainEqual({
       op: 'fundVault',
-      args: { cep18PackageHash: CEP18_PKG, vaultContractHash: VAULT_CONTRACT, amount: '50' },
+      args: { cep18PackageHash: CEP18_PKG, vaultPackageHash: VAULT_PKG, amount: '50' },
     });
     expect(calls).toContainEqual({
       op: 'pay',
