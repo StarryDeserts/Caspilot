@@ -1,57 +1,208 @@
+<div align="center">
+
 # Caspilot
 
-Autonomous DeFi-yield agent for the Casper Agentic Buildathon 2026 — two product lines (an x402-paid agent API and a delegated on-chain PolicyVault) over one backend. The authoritative design is `docs/superpowers/specs/2026-06-05-caspilot-design.md`; the phased build lives in `docs/superpowers/plans/2026-06-05-caspilot-implementation.md`. The mandatory **Tier-1 on-chain demo** — with block-explorer-verifiable casper-test proof and how to reproduce it — is documented in [`docs/tier1-demo.md`](docs/tier1-demo.md).
+### An autonomous DeFi agent for Casper that **cannot run away with your money**.
 
-## Status
+*AI proposes &nbsp;·&nbsp; the signer & on-chain vault authorize &nbsp;·&nbsp; the chain executes.*
 
-- **P0 — Monorepo bootstrap: complete.** pnpm workspace, strict shared `tsconfig`, vitest, biome, GitHub Actions CI.
-- **Phase 1 — PolicyVault Odra contract: complete (P1.0–P1.5).** The full spec §3A.2 ABI lives in `contracts/policy-vault/src/{lib.rs,errors.rs,events.rs}`: owner/admin controls (allow/revoke agents + receivers, `set_limits`, `set_valid_until`, `expire_now`), and `pay()` enforcing agent/receiver allowlists, validity window, per-payment + daily limits, UTC-day rollover, `payload_hash` replay protection, checked-add overflow, and a CEP-18 `transfer` after a self-balance check. 29 Rust tests pass and `PolicyVault.wasm` builds via the cargo-odra workflow (`node scripts/check-cargo.mjs`).
-  - Odra 2.0 note: CEP-18 callee transfer failures propagate the CEP-18 error code directly (generated `ContractRef` calls revert on failure); PolicyVault's guarantee is that no `day_spend` / `paid_total` / `used_payload_hashes` state changes when a transfer reverts. `Cep18CallFailed` is reserved for a future non-reverting adapter path.
-- **Phase 2 — x402 gateway + SQLite payment ledger: complete.** Two packages, `@caspilot/x402` (`packages/x402-gateway/`) and `@caspilot/payment-ledger`, ship the wire schemas (verify/settle/supported, frozen Go-pinned fixtures), the `PAYMENT-SIGNATURE` header codec, a replay-protection ledger (better-sqlite3, WAL, `UNIQUE(nonce,payer,asset)` + `UNIQUE(payload_hash)`), and the gateway over a thin `FacilitatorClient` that records each verified authorization and reconciles settle outcomes against it. 160 JS tests pass workspace-wide; tests use a fake facilitator and fake ledger (no network).
-  - Implementation notes (deviations from spec §3B.0–§3B.3 worth carrying into Phase 3):
-    - **Local `PaymentLedgerPort` is intentional.** `x402-gateway` depends on a local port interface (`packages/x402-gateway/src/ledger-port.ts`), **not** on `@caspilot/payment-ledger` directly. The real ledger package is structurally compatible; the adapter is wired at the API layer. This avoids a package cycle and a pre-build step in the build-free typecheck gate.
-    - **`canonicalJson` / `canonicalSha256Hex` are currently local to `@caspilot/x402`** (`packages/x402-gateway/src/canonical.ts`). Spec §3B.3 expects them in `packages/shared` (does not exist yet). **Extract to `packages/shared` in Phase 3** rather than duplicating across new packages.
-    - **`PaymentLedgerPort.markFailed(id, reason)` does NOT persist `reason`.** The LOCKED §3B.2 `payment_ledger` schema has no column for it — failure reasons belong in the audit trace keyed by `trace_id`. The `reason` parameter is kept only for interface conformance.
-    - **`better-sqlite3` (12.10.0) is the allowed native dependency for the SQLite-backed ledger.** Root `package.json` declares `pnpm.onlyBuiltDependencies: ["better-sqlite3"]` so the install script runs under pnpm 9. CI uses `ubuntu-latest` with Node 22, matching a better-sqlite3 prebuilt ABI (127) and avoiding the Node 20 source-compile path. Keep CI on Node 22+ unless deliberately accepting Node 20 native compilation risk.
-- **Phase 3 — SignerGuard + SQLite spend ledger: complete.** `packages/shared` owns canonical JSON/SHA-256 helpers used by both x402 replay hashes and SignerGuard policy digests. `packages/signer-guard` provides policy parsing, deterministic `policyDigest`, deny-by-default rule checks, a SQLite `signer_spend_ledger` reservation model (`reserved`/`committed`/`released`, `UNIQUE(intent_id)`, daily cap accounting, `releaseExpired(nowMs, ttlMs)`), and a `RawSigner` interface tested with fake signers so denial paths never sign. Phase 3 intentionally does not include a real private-key signer, API/frontend routes, a background sweeper, or on-chain execution.
-- **Phase 4 — Intent FSM + read-only adapters + audit trace + Hono API: complete (4.1–4.17).** `@caspilot/intent-fsm` (canonical states, deny-by-default `ALLOWED_TRANSITIONS`, branded ids, canonical JSON), `@caspilot/adapters` (read-only casper-rpc / CEP-18 / CSPR.cloud / CSPR.trade behind a capability guard — no write/broadcast path), and `@caspilot/audit-trace` (a redactor that strips reasoning/chain-of-thought before persistence) feed a Hono `apps/api`. Intent routes drive a reserve → commit → release spend lifecycle on the real `signer_spend_ledger`: `validate-policy` reserves (day-cap failure → 422 `day_cap_exceeded`; `UNIQUE(intent_id)` = replay protection), `mark-executed` validates the deploy hash then commits, `reject` releases an uncommitted reservation. Redaction runs upstream of `append()` and again on `/trace` export. 271 JS tests pass workspace-wide.
-  - Demo fast-forward (documented in `apps/api/src/intents/router.ts`): `mark-executed` collapses POLICY_VALIDATED → EXECUTED, a hop the canonical FSM deliberately forbids; the API does not claim FSM conformance for it, and a later backend phase must drive the intermediate states step-by-step. Deferred backend hardening (none block P4): `SpendLedger.releaseExpired()` exists but is wired to no sweeper (abandoned reservations leak reserved budget until restart); audit payloads omit `reservationId`; `reject` tolerates malformed JSON where siblings 400; the placeholder signer public key differs between router and stub.
-- **Phase 5 — Next.js web UI: complete (5.1–5.9).** `apps/web` (Next.js 14 App Router, React 18, Tailwind) talks to `apps/api` exclusively over `NEXT_PUBLIC_CASPILOT_API_BASE`. Security posture locked in: no privileged secret can reach the client (`src/lib/env.ts` `validatePublicEnv()` rejects privileged `NEXT_PUBLIC_*` names, and a build-time gate `scripts/check-bundle-secrets.mjs` scans the real `.next` bundle for named leak shapes and live secret values); the only user signer is CSPR.click (`src/lib/wallet.ts` rejects any provider exposing privileged fields — never a local/demo signer); and the audit trace is re-redacted client-side (`TraceList` strips a forbidden-key denylist). 34 web tests plus a `build:check` gate (`next build` → bundle scan) bring the workspace to 305 green.
-- **Phase 6 — Tier-1 demo harness (real on-chain proof): complete.** `apps/harness` builds the write path the Phase-4 read-only adapters deliberately lacked — `buildVaultInstallDeploy` (ModuleBytes session install) and `buildVersionedContractCallDeploy` in `@caspilot/adapters`, local PEM signing via `loadLocalDevSigner` (the agent never holds the key; only a detached signature crosses the boundary), and `CasperDeployAdapter` broadcast/observe — and runs the full Tier-1 sequence end to end on casper-test: deploy PolicyVault → fund it → one accepted `pay()` → two policy-rejected `pay()`, sealed into a schema-valid `apps/harness/.demo/tier1-artifacts.json`. The gated vitest live runner (`test/run-tier1.live.test.ts`, `RUN_REAL_ONCHAIN=1`, casper-test only) drives it; the same file's offline integration tests run the whole orchestrator through injected seams with zero network. The workspace is now 428 JS tests green (2 gated live tests skip without `RUN_REAL_ONCHAIN=1`).
-  - **Real casper-test proof (2026-06-15, blocks 8185770–8185776), independently verifiable on `testnet.cspr.live`:** vault `contractHash 8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e` (install deploy `bf555d60…5431`); accepted `pay()` deploy `a7419aa2…2bdf5` (amount 50); rejections `e6801a75…cec7` (`receiver_not_allowed`, `User error: 3`) and `c4a48997…0eea` (`over_max_single_payment`, `User error: 4`). The rejection codes are the raw `PolicyVaultError` discriminants from `contracts/policy-vault/src/errors.rs`. The sealed `.demo/tier1-artifacts.json` is gitignored (local-only; re-run the live runner to regenerate), but the deploy hashes above are permanent on casper-test.
-  - **Five casper-2.0 (Condor) testnet SDK/node compat fixes** landed to make the live broadcast work (found, fixed, proven on-chain): JSON-RPC envelope field (`version`→`jsonrpc`), reader named-keys `Account` shape, legacy `ContractPackage` under `hash-<pkg>`, deploy finalization observed via `getTransactionByDeployHash` (legacy deploys are transaction-wrapped), and the 7-arg odra-modules `Cep18::init` ABI.
+[![network](https://img.shields.io/badge/network-casper--test-blue)](https://testnet.cspr.live)
+[![tier-1](https://img.shields.io/badge/Tier--1%20on--chain%20proof-verified-success)](docs/tier1-demo.md)
+[![tests](https://img.shields.io/badge/tests-428%20green-success)](#verify-it-yourself)
+[![license](https://img.shields.io/badge/license-MIT-lightgrey)](#license)
 
-## Toolchain
+Casper Agentic Buildathon 2026
 
-- Rust: `nightly-2024-07-31` with `wasm32-unknown-unknown`, `rustfmt`, and `clippy` from `rust-toolchain.toml`.
-- Odra crates: `2.0.0`.
-- `cargo-odra`: `0.1.7`.
-- WASM tools: workspace dev dependencies `binaryen` (`wasm-opt`) and `wabt` (`wasm-strip`).
-- Compatibility pins in `Cargo.lock`/workspace dependencies keep Odra 2.0.0 and registry crates on versions parseable by `nightly-2024-07-31` (`base64ct`, `blake3`, `clap`, `hashbrown`, `indexmap`, `proptest`, `tempfile`, and Odra subcrates).
+</div>
 
-Install the CLI used for local verification:
+---
 
-```bash
-cargo install cargo-odra@0.1.7 --locked --features cargo-generate/vendored-openssl
+## The headline: this is real, and you can check it yourself
+
+Caspilot's core claim — *an on-chain policy gate that stops a misbehaving agent* — is **proven on casper-test and permanently verifiable on a block explorer**. No rebuild, no trust in us. Look any hash up on [`testnet.cspr.live`](https://testnet.cspr.live):
+
+| Step | Result | Deploy hash | On-chain outcome |
+|---|---|---|---|
+| Deploy PolicyVault | ✅ installed | [`bf555d60…5431`](https://testnet.cspr.live/deploy/bf555d60bcbb3b9375d8281f32dceb86523fd0b5103ea11f409838ab3f2d5431) | contract [`8f75ba25…d63e`](https://testnet.cspr.live/contract/8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e) |
+| `pay()` **accepted** | ✅ transfer | [`a7419aa2…2bdf5`](https://testnet.cspr.live/deploy/a7419aa2fcedff56b76fe509ecc745b9f1da0ecd5b26e0205a0241061242bdf5) | 50 tokens → allowlisted receiver |
+| `pay()` **rejected** — receiver not allowed | ⛔ reverted | [`e6801a75…cec7`](https://testnet.cspr.live/deploy/e6801a750b58bbe955240b0fef19e53ced76219be397043bb1f56e03280bcec7) | `User error: 3` (`ReceiverNotAllowed`) |
+| `pay()` **rejected** — over per-payment max | ⛔ reverted | [`c4a48997…0eea`](https://testnet.cspr.live/deploy/c4a48997dfcd7c56c2d019caaa771467f71d48d50ca85584218fb2a9327a0eea) | `User error: 4` (`AmountAboveMax`) |
+
+A genuine policy gate must do more than let a good payment through — it must **stop** the bad ones on-chain, where the agent cannot override it. Two correctly-signed, correctly-formed payments were reverted **purely because they violated policy**. That is the whole thesis, on-chain.
+
+Full walkthrough, trust model, and reproduce steps → **[`docs/tier1-demo.md`](docs/tier1-demo.md)**.
+
+---
+
+## The problem
+
+Autonomous agents that touch money are a security nightmare. To act, an agent usually needs a key — and a key is unbounded authority. If the model is jailbroken, hallucinates a recipient, or is simply wrong, *nothing on-chain stops it*. "Trust the prompt" is not a security model.
+
+## The solution
+
+**Caspilot splits the agent's intelligence from its authority.** The agent can *reason* about yield and *propose* a payment, but it never holds a key and can never move funds on its own. Every payment passes through two independent gates it cannot bypass:
+
+1. **An off-chain SignerGuard** — deny-by-default policy checks + a SQLite spend-ledger that *reserves* budget before anything is signed (replay-protected, daily-capped).
+2. **An on-chain PolicyVault** — an Odra smart contract that re-checks *every* `pay()` against an agent allowlist, a receiver allowlist, a per-payment max, a daily cap, a validity window, and a payload-hash nonce — and reverts if any fails.
+
+> **AI proposes; signer & vault authorize; chain executes.** The vault's allowlisted agent is bound to the *signer's own derived account hash* — so on-chain authority follows the key that actually signs, not a value the caller passes in.
+
+Caspilot ships this as **two product lines over one backend**:
+
+- 💸 **An x402-paid agent API** — pay-per-call yield intelligence, settled with the x402 payment protocol (CEP-18 + EIP-712 authorization) and a replay-protected ledger.
+- 🔐 **A delegated on-chain PolicyVault** — deposit funds, set the rules, and let the agent operate *within* them. The chain is the backstop.
+
+---
+
+## How it works
+
+```
+                  ┌──────────────────────────────────────────────────┐
+                  │                  apps/web (Next.js)               │
+                  │   create intent · watch redacted trace · CSPR.click signing
+                  └───────────────┬──────────────────────────────────┘
+                                  │  HTTP (NEXT_PUBLIC_CASPILOT_API_BASE)
+                                  ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │                  apps/api (Hono)                  │
+                  │  intent FSM · x402 gateway · audit trace (redacted)│
+                  └───────┬───────────────────────────┬──────────────┘
+                          │                           │
+                  ┌───────▼────────┐          ┌───────▼─────────┐
+                  │  SignerGuard   │          │  Payment ledger │
+                  │ deny-by-default│          │  replay-proof   │
+                  │  spend ledger  │          │  (SQLite, WAL)  │
+                  └───────┬────────┘          └─────────────────┘
+                          │ detached signature only (key never crosses)
+                  ┌───────▼────────────────────────────────────────┐
+                  │     apps/harness  →  CasperDeployAdapter        │
+                  │     broadcast + observe on casper-test          │
+                  └───────┬────────────────────────────────────────┘
+                          ▼
+                  ┌──────────────────────────────────────────────────┐
+                  │   PolicyVault (Odra)  —  the on-chain backstop    │
+                  │   allowlists · per-payment max · daily cap ·      │
+                  │   validity window · payload-hash nonce            │
+                  └──────────────────────────────────────────────────┘
 ```
 
-The extra vendored OpenSSL feature keeps installation reproducible in environments without system `pkg-config`/OpenSSL development headers.
+The agent's only path to the chain is a **detached, tagged signature** over a byte-identical deploy. The signing key is loaded by the signer and never crosses into the broadcast adapter. Even with a valid signature, the vault still has the final say.
 
-## Local checks
+---
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Smart contract | **Odra 2.0** (Rust → WASM), CEP-18 token transfers |
+| Backend API | **Hono** + `@hono/node-server`, TypeScript (strict, NodeNext) |
+| Web | **Next.js 14** App Router, React 18, Tailwind |
+| Payments | **x402** protocol (verify/settle/supported wire schemas, `PAYMENT-SIGNATURE` codec) |
+| Ledgers | **SQLite** via better-sqlite3 (WAL), `UNIQUE` replay constraints |
+| Chain access | casper-js-sdk against a **casper-2.0 (Condor)** testnet node |
+| Monorepo | pnpm workspace · vitest · biome · GitHub Actions CI |
+
+**428 automated tests** across 12 workspaces, plus a Rust contract suite and a gated real-broadcast live runner.
+
+---
+
+## Quickstart
+
+> Prerequisites: **Node ≥ 20.10** (CI runs Node 22), **pnpm 9.12**, and — for the contract — the Rust/Odra toolchain (see [`docs/development-status.md`](docs/development-status.md#toolchain)).
 
 ```bash
-node scripts/check-cargo.mjs
-node scripts/check-ci.mjs
-pnpm typecheck
-pnpm test
-pnpm format:check
+pnpm install          # installs the workspace (better-sqlite3 builds natively)
+pnpm typecheck        # strict TS across every package
+pnpm test             # 428 tests (the 2 real-broadcast tests self-skip)
 ```
 
-`node scripts/check-cargo.mjs` runs the supported Odra workflow from `contracts/policy-vault/` with `CARGO_TARGET_DIR=target` and `node_modules/.bin` on `PATH`:
+### Verify the contract logic
 
 ```bash
-cargo odra test -b casper
-cargo odra build
+node scripts/check-cargo.mjs   # cargo odra test -b casper && cargo odra build
 ```
 
-`cargo-odra 0.1.7` supports the Casper backend flag for `test`; its actual `build` command does not accept `-b`, so P1 uses plain `cargo odra build` for the build half of the cargo-odra workflow. Use `cargo odra` commands as the default for P1 contract work. Do not use plain `cargo test` as the default unless a specific test is known to work under plain Cargo.
+### Run the web UI locally
+
+```bash
+pnpm --filter api dev          # API on http://localhost:8787
+pnpm --filter web dev          # Web on http://localhost:3001
+```
+
+Open <http://localhost:3001> → **Intents** to draft a payment intent and **Intent detail** to watch its (redacted) audit trace.
+
+> **Note (honest status):** the production API entrypoint (`apps/api/src/index.ts`) currently serves only `/healthz` and `/version`; the full `/intents` lifecycle is exercised by the test suite and needs its dependencies wired into `index.ts` to serve over HTTP. The one-step wiring (with exact code) is in [`docs/deploy-vercel.md`](docs/deploy-vercel.md#enabling-the-live-api). The Tier-1 proof above is **independent of any hosting** — the deploy hashes are permanent on-chain.
+
+### Reproduce the on-chain proof (optional, spends test-CSPR)
+
+Opt-in, **casper-test only**, gated behind `RUN_REAL_ONCHAIN=1`. Full env and command in [`docs/tier1-demo.md`](docs/tier1-demo.md#reproduce-it-live-optional).
+
+---
+
+## Security model
+
+Defense-in-depth is the point of this project, not an afterthought:
+
+- **Key separation** — the agent/API never holds the signing key; only a detached signature crosses the trust boundary into the broadcast adapter.
+- **Deny-by-default** — SignerGuard rejects anything not explicitly allowed; denial paths never reach the signer.
+- **On-chain backstop** — the PolicyVault re-validates every `pay()`; a valid signature is necessary but not sufficient.
+- **No secrets in the browser** — `validatePublicEnv()` rejects privileged `NEXT_PUBLIC_*` names, and a build-time gate (`scripts/check-bundle-secrets.mjs`) scans the real `.next` bundle for leak shapes *and* live secret values.
+- **User signs, not the server** — the only web signer is CSPR.click; any provider exposing privileged fields is rejected.
+- **Audit trace, not chain-of-thought** — reasoning/prompts are redacted before persistence and re-redacted on export. The trace records *what was decided*, never the model's private reasoning.
+- **Replay protection everywhere** — `UNIQUE(nonce,payer,asset)` and `UNIQUE(payload_hash)` in the payment ledger; `UNIQUE(intent_id)` reservations in the spend ledger; payload-hash nonces on-chain.
+
+---
+
+## Repository layout
+
+```
+caspilot/
+├── apps/
+│   ├── api/            Hono API — intent FSM, x402 gateway, audit trace
+│   ├── web/            Next.js 14 UI (Vercel-ready)
+│   ├── harness/        Tier-1 real-broadcast orchestrator (casper-test)
+│   └── adapter-doctor/ adapter capability/health checks
+├── packages/
+│   ├── intent-fsm/     canonical states + deny-by-default transitions
+│   ├── signer-guard/   policy checks + SQLite spend ledger
+│   ├── x402-gateway/   x402 wire schemas + PAYMENT-SIGNATURE codec
+│   ├── payment-ledger/ replay-protected SQLite ledger
+│   ├── adapters/       casper-rpc / CEP-18 / CSPR.cloud / write path
+│   ├── audit-trace/    reasoning redactor + store
+│   └── shared/         canonical JSON / SHA-256 helpers
+├── contracts/
+│   └── policy-vault/   the Odra smart contract (the on-chain gate)
+└── docs/
+    ├── tier1-demo.md          ← the verifiable on-chain proof
+    ├── deploy-vercel.md       ← deployment guide
+    ├── demo-recording.md      ← demo-video runbook
+    └── development-status.md  ← detailed phase-by-phase build log
+```
+
+---
+
+## Roadmap
+
+- ✅ **Tier-1 (mandatory)** — on-chain PolicyVault enforcement proven on casper-test, sealed into a schema-valid artifact.
+- ⏭️ **Wire the live API** — assemble `IntentRouterDeps` into `index.ts` so the intent lifecycle serves over HTTP (see deploy guide).
+- ⏭️ **Step-by-step FSM** — replace the `mark-executed` demo fast-forward with the full intermediate state walk.
+- ⏭️ **Reservation sweeper** — wire `releaseExpired()` to a background job so abandoned reservations free budget.
+- ⏭️ **Tier-2/3** — multi-step yield strategies, more adapters, mainnet hardening.
+
+---
+
+## Documentation
+
+- 🔗 **[On-chain proof (Tier-1)](docs/tier1-demo.md)** — the headline, block-explorer verifiable.
+- 🚀 **[Vercel deployment guide](docs/deploy-vercel.md)** — what goes on Vercel, what doesn't, and why.
+- 🎬 **[Demo-video runbook](docs/demo-recording.md)** — shot list + narration for recording the demo.
+- 🛠️ **[Engineering status log](docs/development-status.md)** — every phase, every deviation, every compat fix.
+
+## Demo video
+
+<!-- Add the recorded demo link here once published -->
+_Link to be added — see [`docs/demo-recording.md`](docs/demo-recording.md) for the recording runbook._
+
+## License
+
+MIT — see `LICENSE`. _(Add a `LICENSE` file if one is not yet present.)_
