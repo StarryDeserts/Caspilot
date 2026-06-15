@@ -216,7 +216,19 @@ describe('runTier1Live (live casper-test)', () => {
         now: () => Date.now(),
         loadSigner: (config) =>
           loadLocalDevSigner({ pemPath: config.signerKeyPath, algorithm: config.signerAlgorithm }),
-        makeBroadcaster: (config) => new CasperDeployAdapter({ url: config.rpc }),
+        makeBroadcaster: (config) => {
+          // The orchestrator awaits each deploy with the adapter's default poll
+          // budget (60s); a real casper-test install of a 300KB+ WASM can take
+          // longer to surface execution info, and a mid-sequence timeout would
+          // waste the gas already spent on earlier deploys. Poll far more
+          // generously here so the whole 8-deploy sequence has room to finalize.
+          const adapter = new CasperDeployAdapter({ url: config.rpc });
+          return {
+            submitSignedDeploy: (i) => adapter.submitSignedDeploy(i),
+            awaitDeployFinalized: (h) =>
+              adapter.awaitDeployFinalized(h, { pollIntervalMs: 5000, maxAttempts: 36 }),
+          };
+        },
         makeReader: (config) => new CasperStateReader(makeRpcEntityClient({ url: config.rpc })),
         readWasm: (path) => readFileSync(path),
         writeArtifacts: (json) => {
@@ -236,6 +248,6 @@ describe('runTier1Live (live casper-test)', () => {
       expect(artifacts.rejections.length).toBeGreaterThanOrEqual(1);
       expect(artifacts.rejections.some((r) => r.kind === 'receiver_not_allowed')).toBe(true);
     },
-    600_000,
+    1_800_000,
   );
 });

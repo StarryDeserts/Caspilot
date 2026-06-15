@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { CLValue, KeyAlgorithm } from 'casper-js-sdk';
+import { CLTypeKey, CLTypeUInt8, CLValue, KeyAlgorithm } from 'casper-js-sdk';
 import { CasperDeployAdapter, CasperStateReader, makeRpcEntityClient } from '@caspilot/adapters';
 import type { RawSigner } from '@caspilot/signer-guard';
 import { type DeployVaultPlan, buildDeployVaultPlan } from './deploy-vault.js';
@@ -243,11 +243,19 @@ export function assembleTier1LiveDeps(input: {
     build,
     cep18: {
       wasm: readWasm(config.cep18WasmPath),
+      // The full 7-arg odra-modules 2.0.0 `Cep18::init` ABI, in declaration order:
+      //   init(symbol, name, decimals, initial_supply, admin_list, minter_list, modality)
+      // init mints `initial_supply` to the caller and grants the caller Admin
+      // unconditionally, so empty admin/minter lists are correct. `modality` is
+      // Option::None (`00` tag) to stay independent of the Cep18Modality byte-width.
       installArgs: {
-        name: CLValue.newCLString(config.cep18.name),
         symbol: CLValue.newCLString(config.cep18.symbol),
+        name: CLValue.newCLString(config.cep18.name),
         decimals: CLValue.newCLUint8(config.cep18.decimals),
-        total_supply: CLValue.newCLUInt256(config.cep18.totalSupply),
+        initial_supply: CLValue.newCLUInt256(config.cep18.totalSupply),
+        admin_list: CLValue.newCLList(CLTypeKey, []),
+        minter_list: CLValue.newCLList(CLTypeKey, []),
+        modality: CLValue.newCLOption(null, CLTypeUInt8),
       },
     },
     vault: {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { KeyAlgorithm, PrivateKey } from 'casper-js-sdk';
+import { KeyAlgorithm, PrivateKey, TypeID } from 'casper-js-sdk';
 import type { RawSigner } from '@caspilot/signer-guard';
 import { buildTier1RealConfig, assembleTier1LiveDeps } from '../scripts/run-tier1.js';
 import type { Tier1Broadcaster, Tier1Reader } from '../src/live-tier1-ops.js';
@@ -145,17 +145,40 @@ describe('assembleTier1LiveDeps', () => {
       },
     });
 
-    // Bare CEP-18 ctor args (Odra cfg args are added later by buildLiveTier1Ops).
+    // The full 7-arg Odra `Cep18::init` ABI (odra-modules 2.0.0), in declaration
+    // order. Odra cfg args (package-hash key-name/override/upgradable) are added
+    // later by buildLiveTier1Ops; these are the bare constructor args.
     expect(Object.keys(deps.cep18.installArgs)).toEqual([
-      'name',
       'symbol',
+      'name',
       'decimals',
-      'total_supply',
+      'initial_supply',
+      'admin_list',
+      'minter_list',
+      'modality',
     ]);
-    expect(deps.cep18.installArgs.name?.toString()).toBe('CaspilotDemoUSD');
     expect(deps.cep18.installArgs.symbol?.toString()).toBe('CDUSD');
+    expect(deps.cep18.installArgs.name?.toString()).toBe('CaspilotDemoUSD');
     expect(deps.cep18.installArgs.decimals?.toString()).toBe('9');
-    expect(deps.cep18.installArgs.total_supply?.toString()).toBe('1000000000');
+    expect(deps.cep18.installArgs.initial_supply?.toString()).toBe('1000000000');
+
+    // admin_list and minter_list are empty List<Key> — the installer (caller)
+    // is granted Admin unconditionally by init, so no extra grants are needed.
+    const adminList = deps.cep18.installArgs.admin_list;
+    expect(adminList?.getType().getTypeID()).toBe(TypeID.List);
+    expect(adminList?.list?.isEmpty()).toBe(true);
+    expect(adminList?.list?.type.elementsType.getTypeID()).toBe(TypeID.Key);
+
+    const minterList = deps.cep18.installArgs.minter_list;
+    expect(minterList?.getType().getTypeID()).toBe(TypeID.List);
+    expect(minterList?.list?.isEmpty()).toBe(true);
+    expect(minterList?.list?.type.elementsType.getTypeID()).toBe(TypeID.Key);
+
+    // modality is Option::None — serializes to a single `00` tag, so the wire
+    // form never depends on the Cep18Modality enum byte-width.
+    const modality = deps.cep18.installArgs.modality;
+    expect(modality?.getType().getTypeID()).toBe(TypeID.Option);
+    expect(modality?.option?.isEmpty()).toBe(true);
 
     // CEP-18 wasm is read before the vault wasm.
     expect(reads).toEqual(['/tmp/cep18.wasm', '/tmp/vault.wasm']);

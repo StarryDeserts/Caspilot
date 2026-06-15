@@ -84,12 +84,18 @@ export class CasperDeployAdapter {
     const client = new RpcClient(new FetchHandler(this.url, this.fetchImpl, this.timeoutMs));
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // A throw means the node does not know the deploy yet (or a transient RPC
-      // error) — both are "not finalized", so fall through to the next attempt.
-      const res = await client.getDeploy(deployHash).catch(() => undefined);
+      // On Condor 2.0 a legacy deploy submitted via account_put_deploy is wrapped
+      // as a transaction: info_get_deploy returns execution_info:null forever, so
+      // we observe via info_get_transaction (getTransactionByDeployHash). A throw
+      // means the node does not know the deploy yet (or a transient RPC error) —
+      // both are "not finalized", so fall through to the next attempt.
+      const res = await client.getTransactionByDeployHash(deployHash).catch(() => undefined);
       const info = res?.executionInfo;
-      if (info) {
-        const errorMessage = info.executionResult?.errorMessage ?? null;
+      // Block inclusion alone is not a result: execution_info can carry a block
+      // height a beat before the execution_result is attached. Treat "in a block
+      // but no result yet" as not-finalized and keep polling for the result.
+      if (info?.executionResult) {
+        const errorMessage = info.executionResult.errorMessage ?? null;
         const finalization: DeployFinalization = {
           finalizedHeight: info.blockHeight,
           success: !errorMessage,
@@ -139,7 +145,9 @@ export class CasperDeployAdapter {
       });
       if (!res.ok) throw new Error(`http_${res.status}`);
       const json = (await res.json()) as JsonRpcEnvelope<T>;
-      if (json.error) throw new Error(`rpc_${json.error.code}`);
+      // Carry the node's message, not just the code: a bare `rpc_-32008` is
+      // undiagnosable, but `rpc_-32008: deploy is invalid: ...` names the cause.
+      if (json.error) throw new Error(`rpc_${json.error.code}: ${json.error.message}`);
       return json.result as T;
     } finally {
       clearTimeout(t);

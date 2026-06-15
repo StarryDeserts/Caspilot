@@ -57,16 +57,19 @@ function envFixture(amount = 1000): Envelope {
   });
 }
 
-// A Casper 2.0 (Condor) info_get_deploy result with execution_info present.
-// A null error_message is a successful execution; a "User error: <code>"
-// string is a revert carrying the contract's numeric code.
+// A Casper 2.0 (Condor) info_get_transaction result with execution_info present.
+// On Condor a legacy deploy is wrapped as a transaction, so the deploy rides
+// under `transaction.Deploy` and only info_get_transaction surfaces execution
+// info — info_get_deploy returns execution_info:null. A null error_message is a
+// successful execution; a "User error: <code>" string is a revert carrying the
+// contract's numeric code.
 function finalizedDeploy(env: Envelope, opts: { height: number; errorMessage?: string }): Response {
   return jsonResponse({
     jsonrpc: '2.0',
     id: '1',
     result: {
       api_version: '2.0.0',
-      deploy: env.headerJson,
+      transaction: { Deploy: env.headerJson },
       execution_info: {
         block_hash: 'b'.repeat(64),
         block_height: opts.height,
@@ -94,16 +97,36 @@ function pendingDeploy(env: Envelope): Response {
   return jsonResponse({
     jsonrpc: '2.0',
     id: '1',
-    result: { api_version: '2.0.0', deploy: env.headerJson, execution_info: null },
+    result: { api_version: '2.0.0', transaction: { Deploy: env.headerJson }, execution_info: null },
+  });
+}
+
+// The transient window observed on Condor: the deploy is in a block (execution_info
+// carries a block_height) but the execution_result has not yet been attached. This
+// must NOT be read as a successful execution — block inclusion is not a result.
+function includedNoResultDeploy(env: Envelope, height: number): Response {
+  return jsonResponse({
+    jsonrpc: '2.0',
+    id: '1',
+    result: {
+      api_version: '2.0.0',
+      transaction: { Deploy: env.headerJson },
+      execution_info: {
+        block_hash: 'b'.repeat(64),
+        block_height: height,
+        execution_result: null,
+      },
+    },
   });
 }
 
 // The node does not yet know this deploy (propagation window): a JSON-RPC error.
+// info_get_transaction reports an unknown deploy as NoSuchTransaction (-32014).
 function unknownDeploy(): Response {
   return jsonResponse({
     jsonrpc: '2.0',
     id: '1',
-    error: { code: -32000, message: 'No such deploy' },
+    error: { code: -32014, message: 'No such transaction' },
   });
 }
 
@@ -180,7 +203,7 @@ describe('CasperDeployAdapter.submitSignedDeploy', () => {
     ).rejects.toThrow('http_500');
   });
 
-  it('surfaces a JSON-RPC error as rpc_<code>', async () => {
+  it('surfaces a JSON-RPC error as rpc_<code> carrying the node message', async () => {
     const { env, signerPk, signatureHex } = signedFixture();
     const fetchMock = vi
       .fn()
@@ -189,9 +212,11 @@ describe('CasperDeployAdapter.submitSignedDeploy', () => {
       );
     const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
 
+    // The node's human-readable reason must reach the caller — a bare code like
+    // -32008 is undiagnosable without it.
     await expect(
       adapter.submitSignedDeploy({ envelope: env, signatureHex, signerPk }),
-    ).rejects.toThrow('rpc_-32602');
+    ).rejects.toThrow('rpc_-32602: invalid');
   });
 });
 
@@ -209,12 +234,13 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
     expect(out).toEqual({ finalizedHeight: 4242, success: true });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    // It asked info_get_deploy for exactly this hash.
+    // It observed via info_get_transaction (the Condor path for legacy deploys),
+    // addressing the deploy by its hash under the Deploy transaction variant.
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe(RPC_URL);
     const sent = JSON.parse((init as RequestInit).body as string);
-    expect(sent.method).toBe('info_get_deploy');
-    expect(sent.params.deploy_hash).toBe(env.bodyHashHex);
+    expect(sent.method).toBe('info_get_transaction');
+    expect(sent.params.transaction_hash.Deploy).toBe(env.bodyHashHex);
   });
 
   it('reports success=false and the numeric error code for a reverted execution', async () => {
@@ -279,6 +305,22 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('does not read block inclusion without an execution result as finalized', async () => {
+    const env = envFixture();
+    const fetchMock = vi
+      .fn()
+      // In a block (height carried) but the result is not yet attached — must poll on.
+      .mockResolvedValueOnce(includedNoResultDeploy(env, 6001))
+      .mockResolvedValueOnce(finalizedDeploy(env, { height: 6002 }));
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    // It reports the height where the result actually landed, not the bare inclusion.
+    expect(out).toEqual({ finalizedHeight: 6002, success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('throws deploy_not_finalized after exhausting the attempt budget', async () => {
     const env = envFixture();
     const fetchMock = vi.fn().mockImplementation(() => pendingDeploy(env));
@@ -330,6 +372,9 @@ describe('CasperDeployAdapter.healthCheck', () => {
     );
     const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
 
-    expect(await adapter.healthCheck()).toEqual({ ok: false, reason: 'rpc_-32601' });
+    expect(await adapter.healthCheck()).toEqual({
+      ok: false,
+      reason: 'rpc_-32601: method not found',
+    });
   });
 });

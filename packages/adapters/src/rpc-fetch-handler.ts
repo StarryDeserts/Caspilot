@@ -21,7 +21,16 @@ export class FetchHandler implements IHandler {
       const res = await this.fetchImpl(this.url, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(req),
+        // The SDK annotates RpcRequest.version with @jsonMember({ name: 'jsonrpc' }),
+        // so plain JSON.stringify(req) emits {"version":"2.0",...} — which every
+        // Casper node rejects with -32600 Invalid Request. Rebuild the envelope with
+        // the mandated `jsonrpc` key; id/method/params serialize unchanged.
+        body: JSON.stringify({
+          jsonrpc: req.version,
+          id: req.id,
+          method: req.method,
+          params: req.params,
+        }),
         signal: ctl.signal,
       });
       if (!res.ok) throw new Error(`http_${res.status}`);
