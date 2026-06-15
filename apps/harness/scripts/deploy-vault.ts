@@ -49,17 +49,21 @@ async function main(): Promise<void> {
     console.log(`[deploy-vault] DRY plan written to ${out}/deploy-vault.plan.json`);
     return;
   }
-  // REAL mode (RUN_REAL_ONCHAIN=1): a PolicyVault deploy is a WASM ModuleBytes
-  // *session* deploy. The write path exists — loadLocalDevSigner signs the
-  // deploy hash and CasperDeployAdapter.submitSignedDeploy broadcasts a
-  // byte-identical re-validated deploy — but buildContractCallDeploy only
-  // assembles StoredContractByHash *contract calls*, not ModuleBytes session
-  // deploys. Wiring a real vault deployment needs a session-WASM deploy builder
-  // (tracked follow-up). Until that exists we refuse loudly rather than fake a
-  // broadcast; casper-test only, never mainnet, when it lands.
+  // REAL mode (RUN_REAL_ONCHAIN=1): a PolicyVault install is a ModuleBytes
+  // *session* deploy. That path is wired and proven on casper-test — the
+  // session-WASM builder is `buildVaultInstallDeploy` (@caspilot/adapters),
+  // signed by loadLocalDevSigner and broadcast/observed via CasperDeployAdapter
+  // — but it runs through the gated live test `test/run-tier1.live.test.ts`, not
+  // this tsx main(): node's ESM lexer can't load casper-js-sdk's CJS value
+  // exports from a tsx entrypoint, so the live run executes under vitest (see
+  // run-tier1-live.ts for the full rationale). This script stays the offline
+  // dry-plan pre-flight; broadcast via the live test. casper-test only, never
+  // mainnet.
   throw new Error(
-    'REAL vault deploy is not wired: needs a ModuleBytes session-WASM deploy builder feeding ' +
-      'CasperDeployAdapter.submitSignedDeploy. Run without RUN_REAL_ONCHAIN=1 for the dry plan.',
+    'REAL vault deploy does not run from this script — broadcast via the gated live test: ' +
+      'RUN_REAL_ONCHAIN=1 pnpm --filter harness test run-tier1.live (it drives ' +
+      'buildVaultInstallDeploy through CasperDeployAdapter on casper-test). ' +
+      'Run this script without RUN_REAL_ONCHAIN=1 for the dry plan.',
   );
 }
 
