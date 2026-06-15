@@ -21,7 +21,9 @@ export function validatePublicEnv(input: Record<string, string | undefined>): Pu
     if (!key.startsWith('NEXT_PUBLIC_')) continue;
     for (const bad of FORBIDDEN_PUBLIC_KEYS) {
       if (key.includes(bad)) {
-        throw new Error(`Forbidden public env key: ${key} — privileged secrets must never be bundled to the browser`);
+        throw new Error(
+          `Forbidden public env key: ${key} — privileged secrets must never be bundled to the browser`,
+        );
       }
     }
   }

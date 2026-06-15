@@ -9,9 +9,17 @@ export interface TraceEntry {
 }
 
 const FRONTEND_FORBIDDEN_KEYS = new Set([
-  'privateKey', 'PRIVATE_KEY', 'mnemonic', 'seed',
-  'apiKey', 'API_KEY', 'CSPR_CLOUD_KEY',
-  'reasoning', 'chainOfThought', 'prompt', 'env',
+  'privateKey',
+  'PRIVATE_KEY',
+  'mnemonic',
+  'seed',
+  'apiKey',
+  'API_KEY',
+  'CSPR_CLOUD_KEY',
+  'reasoning',
+  'chainOfThought',
+  'prompt',
+  'env',
 ]);
 
 function sanitize(value: unknown): unknown {
@@ -37,7 +45,9 @@ export function TraceList({ entries }: { entries: TraceEntry[] }) {
             <span className="text-xs text-zinc-400">{e.kind}</span>
           </div>
           {e.payload !== undefined && (
-            <pre className="text-xs overflow-x-auto">{JSON.stringify(sanitize(e.payload), null, 2)}</pre>
+            <pre className="text-xs overflow-x-auto">
+              {JSON.stringify(sanitize(e.payload), null, 2)}
+            </pre>
           )}
         </li>
       ))}

@@ -43,7 +43,12 @@ describe('Tier 1 rejection plans', () => {
 
   it('refuses to construct pathway A without a blocked receiver', () => {
     expect(() =>
-      planTier1Rejection({ vault: baseVault(), agent: AGENT, kind: 'receiver_not_allowed', amount: '50' }),
+      planTier1Rejection({
+        vault: baseVault(),
+        agent: AGENT,
+        kind: 'receiver_not_allowed',
+        amount: '50',
+      }),
     ).toThrow(/blockedReceiver/);
   });
 
@@ -61,7 +66,12 @@ describe('Tier 1 rejection plans', () => {
 
   it('refuses to construct pathway B with amount <= maxSinglePayment', () => {
     expect(() =>
-      planTier1Rejection({ vault: baseVault(), agent: AGENT, kind: 'over_max_single_payment', amount: '50' }),
+      planTier1Rejection({
+        vault: baseVault(),
+        agent: AGENT,
+        kind: 'over_max_single_payment',
+        amount: '50',
+      }),
     ).toThrow(/amount/);
   });
 });

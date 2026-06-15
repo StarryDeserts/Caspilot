@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { TraceList, type TraceEntry } from '@/components/TraceList.js';
 import { CaspilotApi } from '@/lib/api.js';
 
-const api = new CaspilotApi({ baseUrl: process.env.NEXT_PUBLIC_CASPILOT_API_BASE ?? 'http://localhost:8787' });
+const api = new CaspilotApi({
+  baseUrl: process.env.NEXT_PUBLIC_CASPILOT_API_BASE ?? 'http://localhost:8787',
+});
 
 export default function IntentDetail({ params }: { params: { id: string } }) {
   const [entries, setEntries] = useState<TraceEntry[]>([]);
@@ -15,7 +17,10 @@ export default function IntentDetail({ params }: { params: { id: string } }) {
     };
     tick();
     const id = setInterval(tick, 2000);
-    return () => { cancelled = true; clearInterval(id); };
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [params.id]);
 
   return (

@@ -139,8 +139,11 @@ export function makeSpendLedger(db: SignerGuardDb, clock: () => number = Date.no
 
     findByIntentId(intentId): SignerSpendLedgerRow | null {
       return (
-        db.select().from(signerSpendLedger).where(eq(signerSpendLedger.intentId, intentId)).all()[0] ??
-        null
+        db
+          .select()
+          .from(signerSpendLedger)
+          .where(eq(signerSpendLedger.intentId, intentId))
+          .all()[0] ?? null
       );
     },
   };

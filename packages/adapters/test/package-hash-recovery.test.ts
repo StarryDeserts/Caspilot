@@ -22,9 +22,9 @@ describe('selectPackageHash', () => {
   });
 
   it('strips a contract-package- prefix', () => {
-    expect(
-      selectPackageHash([{ name: 'Cep18', key: `contract-package-${HASH}` }], 'Cep18'),
-    ).toBe(HASH);
+    expect(selectPackageHash([{ name: 'Cep18', key: `contract-package-${HASH}` }], 'Cep18')).toBe(
+      HASH,
+    );
   });
 
   it('accepts a bare 64-hex key with no prefix', () => {
@@ -48,9 +48,9 @@ describe('selectPackageHash', () => {
   });
 
   it('throws a clear error when the contract name is absent', () => {
-    expect(() => selectPackageHash([{ name: 'Cep18', key: `hash-${HASH}` }], 'PolicyVault')).toThrow(
-      /PolicyVault/,
-    );
+    expect(() =>
+      selectPackageHash([{ name: 'Cep18', key: `hash-${HASH}` }], 'PolicyVault'),
+    ).toThrow(/PolicyVault/);
   });
 
   it('throws when the matched key is not a 64-hex package hash', () => {
@@ -62,9 +62,7 @@ describe('selectPackageHash', () => {
 describe('recoverPackageHash', () => {
   it('reads the deployer named keys then returns the selected package hash', async () => {
     const reader: NamedKeysReader = {
-      readDeployerNamedKeys: vi.fn(async () => [
-        { name: 'PolicyVault', key: `hash-${HASH}` },
-      ]),
+      readDeployerNamedKeys: vi.fn(async () => [{ name: 'PolicyVault', key: `hash-${HASH}` }]),
     };
     const deployerPk = `01${'f'.repeat(64)}`;
 

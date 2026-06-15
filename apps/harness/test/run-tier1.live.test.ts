@@ -108,9 +108,7 @@ function fakeReader(): Tier1Reader {
   };
 }
 
-function offlineSeams(
-  envOverrides: Record<string, string | undefined> = {},
-): {
+function offlineSeams(envOverrides: Record<string, string | undefined> = {}): {
   seams: RunTier1LiveSeams;
   written: string[];
   submits: { n: number };

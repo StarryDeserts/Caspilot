@@ -20,12 +20,18 @@ export class ClickWallet {
     }
     for (const k of Object.keys(provider as object)) {
       if (k.includes('CSPR_CLOUD_KEY') || k.includes('PRIVATE_KEY')) {
-        throw new Error(`CSPR.click provider exposes forbidden field "${k}" — frontend must not see privileged secrets`);
+        throw new Error(
+          `CSPR.click provider exposes forbidden field "${k}" — frontend must not see privileged secrets`,
+        );
       }
     }
     this.provider = provider;
   }
 
-  connect(): Promise<ClickAccount> { return this.provider.connect(); }
-  signDeploy(input: { deployHashHex: string }): Promise<ClickSignedDeploy> { return this.provider.signDeploy(input); }
+  connect(): Promise<ClickAccount> {
+    return this.provider.connect();
+  }
+  signDeploy(input: { deployHashHex: string }): Promise<ClickSignedDeploy> {
+    return this.provider.signDeploy(input);
+  }
 }

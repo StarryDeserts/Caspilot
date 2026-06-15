@@ -19,7 +19,11 @@ describe('ClickWallet', () => {
   });
 
   it('refuses to read any property that looks like CSPR_CLOUD_KEY', () => {
-    const provider = { connect: async () => ({ publicKeyHex: '01' + 'ab'.repeat(32) }), signDeploy: async () => ({ signatureHex: 'aa'.repeat(65) }), CSPR_CLOUD_KEY: 'leaked' } as unknown as ClickProvider;
+    const provider = {
+      connect: async () => ({ publicKeyHex: '01' + 'ab'.repeat(32) }),
+      signDeploy: async () => ({ signatureHex: 'aa'.repeat(65) }),
+      CSPR_CLOUD_KEY: 'leaked',
+    } as unknown as ClickProvider;
     expect(() => new ClickWallet(provider)).toThrow(/CSPR_CLOUD_KEY/);
   });
 });

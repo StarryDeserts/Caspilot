@@ -108,13 +108,15 @@ describe('loadLocalDevSigner file-only guards', () => {
   });
 
   it('refuses a relative path', () => {
-    expect(() => loadLocalDevSigner({ pemPath: 'keys/local_dev.pem', readFile: () => 'x' })).toThrow(
-      LocalDevSignerError,
-    );
+    expect(() =>
+      loadLocalDevSigner({ pemPath: 'keys/local_dev.pem', readFile: () => 'x' }),
+    ).toThrow(LocalDevSignerError);
   });
 
   it('refuses a missing file with a clear error (default disk reader)', () => {
-    expect(() => loadLocalDevSigner({ pemPath: '/nonexistent/caspilot/local_dev.pem' })).toThrow(/does not exist/);
+    expect(() => loadLocalDevSigner({ pemPath: '/nonexistent/caspilot/local_dev.pem' })).toThrow(
+      /does not exist/,
+    );
   });
 
   it('does not enforce existence when a readFile override supplies the bytes', () => {

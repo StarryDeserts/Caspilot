@@ -34,7 +34,10 @@ describe('bundle secret scanner', () => {
 
   it('flags a real secret VALUE regardless of variable shape', () => {
     const leak = 'k7Qe' + 'a1b2c3d4'.repeat(4);
-    const result = scanFiles([{ path: 'chunk.js', text: `const x=${JSON.stringify(leak)};` }], [leak]);
+    const result = scanFiles(
+      [{ path: 'chunk.js', text: `const x=${JSON.stringify(leak)};` }],
+      [leak],
+    );
     expect(result.violations.some((v) => v.pattern === 'SECRET_VALUE')).toBe(true);
   });
 });

@@ -5,9 +5,7 @@ import { FORBIDDEN_SUBSTRINGS } from '../scripts/check-bundle-secrets.mjs';
 
 describe('P5 acceptance', () => {
   it('NEXT_PUBLIC_* secret allowlist denies cloud + private key', () => {
-    expect(FORBIDDEN_SUBSTRINGS).toEqual(
-      expect.arrayContaining(['CSPR_CLOUD_KEY', 'PRIVATE_KEY']),
-    );
+    expect(FORBIDDEN_SUBSTRINGS).toEqual(expect.arrayContaining(['CSPR_CLOUD_KEY', 'PRIVATE_KEY']));
   });
 
   it('vault + intents pages are present', () => {

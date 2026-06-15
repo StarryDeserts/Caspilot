@@ -54,7 +54,8 @@ function walk(dir, out = []) {
     const p = join(dir, e);
     const s = statSync(p);
     if (s.isDirectory()) walk(p, out);
-    else if (/\.(js|mjs|css|html|json)$/.test(e)) out.push({ path: p, text: readFileSync(p, 'utf8') });
+    else if (/\.(js|mjs|css|html|json)$/.test(e))
+      out.push({ path: p, text: readFileSync(p, 'utf8') });
   }
   return out;
 }

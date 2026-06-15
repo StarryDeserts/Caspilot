@@ -38,7 +38,10 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
   // fixed placeholder pk, never a real signing key. Actual signing stays behind
   // SignerGuard; this id only groups reservations for one logical signer.
   const signerPkPlaceholder = `01${'00'.repeat(32)}`;
-  const state: Map<string, { state: IntentState; body: z.infer<typeof CreateBody>; createdAtMs: number }> = new Map();
+  const state: Map<
+    string,
+    { state: IntentState; body: z.infer<typeof CreateBody>; createdAtMs: number }
+  > = new Map();
 
   r.post('/', async (c) => {
     let raw: unknown;
@@ -52,7 +55,13 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     const id = mintIntentId();
     const t = now();
     state.set(id, { state: 'DRAFT', body: body.data, createdAtMs: t });
-    deps.audit.append({ intentId: id, state: 'DRAFT', atMs: t, kind: 'created', payload: { body: body.data } });
+    deps.audit.append({
+      intentId: id,
+      state: 'DRAFT',
+      atMs: t,
+      kind: 'created',
+      payload: { body: body.data },
+    });
     return c.json({ id, state: 'DRAFT' }, 201);
   });
 

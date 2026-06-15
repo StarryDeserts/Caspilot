@@ -4,7 +4,9 @@ import { IntentForm, type IntentFormValue } from '@/components/IntentForm.js';
 import { StateBadge } from '@/components/StateBadge.js';
 import { CaspilotApi } from '@/lib/api.js';
 
-const api = new CaspilotApi({ baseUrl: process.env.NEXT_PUBLIC_CASPILOT_API_BASE ?? 'http://localhost:8787' });
+const api = new CaspilotApi({
+  baseUrl: process.env.NEXT_PUBLIC_CASPILOT_API_BASE ?? 'http://localhost:8787',
+});
 
 export default function IntentsPage() {
   const [latest, setLatest] = useState<{ id: string; state: string } | null>(null);

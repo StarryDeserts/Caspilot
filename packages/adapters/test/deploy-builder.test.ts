@@ -24,7 +24,11 @@ function contractCall(sender: string, overrides: Record<string, CLValue> = {}) {
     senderPk: sender,
     contractHash: 'a'.repeat(64),
     entryPoint: 'transfer',
-    args: { amount: CLValue.newCLUInt512(1000), memo: CLValue.newCLString('caspilot'), ...overrides },
+    args: {
+      amount: CLValue.newCLUInt512(1000),
+      memo: CLValue.newCLString('caspilot'),
+      ...overrides,
+    },
     paymentMotes: '3000000000',
     timestampMs: FIXED_TS,
   });
@@ -37,7 +41,11 @@ function versionedCall(sender: string, overrides: Record<string, CLValue> = {}) 
     // Odra installs expose a *package* hash; the call resolves to its latest version.
     packageHash: 'c'.repeat(64),
     entryPoint: 'pay',
-    args: { amount: CLValue.newCLUInt512(1000), memo: CLValue.newCLString('caspilot'), ...overrides },
+    args: {
+      amount: CLValue.newCLUInt512(1000),
+      memo: CLValue.newCLString('caspilot'),
+      ...overrides,
+    },
     paymentMotes: '3000000000',
     timestampMs: FIXED_TS,
   });
@@ -48,7 +56,10 @@ function vaultInstall(sender: string) {
     chainName: CHAIN,
     senderPk: sender,
     moduleWasm: new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]),
-    args: { initial_admin: CLValue.newCLString('caspilot'), max_spend: CLValue.newCLUInt512(1_000_000) },
+    args: {
+      initial_admin: CLValue.newCLString('caspilot'),
+      max_spend: CLValue.newCLUInt512(1_000_000),
+    },
     paymentMotes: '50000000000',
     timestampMs: FIXED_TS,
   });

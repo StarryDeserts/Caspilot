@@ -20,7 +20,15 @@ describe('TraceList', () => {
   it('refuses to render any payload key in FORBIDDEN list', () => {
     const { container } = render(
       <TraceList
-        entries={[{ intentId: 'int_a', state: 'DRAFT', atMs: 1, kind: 'created', payload: { reasoning: 'should-not-render', ok: true } }]}
+        entries={[
+          {
+            intentId: 'int_a',
+            state: 'DRAFT',
+            atMs: 1,
+            kind: 'created',
+            payload: { reasoning: 'should-not-render', ok: true },
+          },
+        ]}
       />,
     );
     expect(container.textContent).not.toMatch(/should-not-render/);

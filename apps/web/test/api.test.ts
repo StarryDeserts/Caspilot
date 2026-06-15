@@ -3,8 +3,14 @@ import { CaspilotApi } from '../src/lib/api.js';
 
 describe('CaspilotApi', () => {
   it('targets only NEXT_PUBLIC_CASPILOT_API_BASE', async () => {
-    const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify({ id: 'int_abc', state: 'DRAFT' }), { status: 201 }));
-    const api = new CaspilotApi({ baseUrl: 'http://api.test', fetch: fetchMock as unknown as typeof fetch });
+    const fetchMock = vi.fn(
+      async (url: string) =>
+        new Response(JSON.stringify({ id: 'int_abc', state: 'DRAFT' }), { status: 201 }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
     const r = await api.createIntent({
       agent: '00' + 'aa'.repeat(32),
       receiver: '00' + 'bb'.repeat(32),
@@ -22,8 +28,13 @@ describe('CaspilotApi', () => {
   });
 
   it('GET /intents/:id/trace returns redacted trace from server', async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ entries: [] }), { status: 200 }));
-    const api = new CaspilotApi({ baseUrl: 'http://api.test', fetch: fetchMock as unknown as typeof fetch });
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ entries: [] }), { status: 200 }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
     const r = await api.getTrace('int_abc');
     expect(r.entries).toEqual([]);
   });

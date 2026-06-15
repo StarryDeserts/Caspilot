@@ -3,7 +3,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { TierOneArtifactsSchema } from '../src/schema.js';
 
-const samplePath = fileURLToPath(new URL('./fixtures/tier1-artifacts.sample.json', import.meta.url));
+const samplePath = fileURLToPath(
+  new URL('./fixtures/tier1-artifacts.sample.json', import.meta.url),
+);
 const load = () => JSON.parse(readFileSync(samplePath, 'utf8'));
 
 describe('P6 acceptance', () => {

@@ -62,7 +62,12 @@ describe('buildTier1RealConfig', () => {
       DEMO_VAULT_VALID_UNTIL_MS: '1900000000000',
     };
     const config = buildTier1RealConfig({ env, now: () => FIXED_NOW });
-    expect(config.cep18).toEqual({ name: 'TestTok', symbol: 'TTK', decimals: 6, totalSupply: '42' });
+    expect(config.cep18).toEqual({
+      name: 'TestTok',
+      symbol: 'TTK',
+      decimals: 6,
+      totalSupply: '42',
+    });
     expect(config.paymentMotes).toEqual({ install: '111', call: '222' });
     expect(config.vault.validUntilMs).toBe(1_900_000_000_000);
   });

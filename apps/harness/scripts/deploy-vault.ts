@@ -18,7 +18,8 @@ export function buildDeployVaultPlan(input: {
   const { env, now } = input;
   if (!env.CASPER_NODE_RPC) throw new Error('CASPER_NODE_RPC is required');
   if (!env.CASPER_CHAINSPEC) throw new Error('CASPER_CHAINSPEC is required');
-  if (!env.LOCAL_SIGNER_PRIVATE_KEY_PATH) throw new Error('LOCAL_SIGNER_PRIVATE_KEY_PATH is required');
+  if (!env.LOCAL_SIGNER_PRIVATE_KEY_PATH)
+    throw new Error('LOCAL_SIGNER_PRIVATE_KEY_PATH is required');
   const mode: 'dry' | 'real' = env.RUN_REAL_ONCHAIN === '1' ? 'real' : 'dry';
   if (mode === 'real' && !env.VAULT_WASM_PATH) {
     throw new Error('VAULT_WASM_PATH is required when RUN_REAL_ONCHAIN=1');
@@ -41,7 +42,10 @@ async function main(): Promise<void> {
   const out = resolve(process.cwd(), '.demo');
   mkdirSync(out, { recursive: true });
   if (plan.mode === 'dry') {
-    writeFileSync(`${out}/deploy-vault.plan.json`, JSON.stringify({ ...plan, signerRole: signer.signerRole }, null, 2));
+    writeFileSync(
+      `${out}/deploy-vault.plan.json`,
+      JSON.stringify({ ...plan, signerRole: signer.signerRole }, null, 2),
+    );
     console.log(`[deploy-vault] DRY plan written to ${out}/deploy-vault.plan.json`);
     return;
   }

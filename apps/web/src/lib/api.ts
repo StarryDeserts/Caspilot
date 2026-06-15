@@ -46,7 +46,10 @@ export class CaspilotApi {
   }
 
   async validatePolicy(id: string): Promise<{ id: string; state: string }> {
-    const res = await this.fetcher(`${this.baseUrl}/intents/${encodeURIComponent(id)}/validate-policy`, { method: 'POST' });
+    const res = await this.fetcher(
+      `${this.baseUrl}/intents/${encodeURIComponent(id)}/validate-policy`,
+      { method: 'POST' },
+    );
     if (!res.ok) throw await this.error('validatePolicy', res);
     return (await res.json()) as { id: string; state: string };
   }

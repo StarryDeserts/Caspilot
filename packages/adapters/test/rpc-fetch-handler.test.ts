@@ -21,7 +21,11 @@ describe('FetchHandler request envelope', () => {
       sentBody = (init as RequestInit).body as string;
       return jsonResponse({ jsonrpc: '2.0', id: '1', result: { api_version: '2.0.0' } });
     });
-    const handler = new FetchHandler('http://node:7777/rpc', fetchMock as unknown as typeof fetch, 8_000);
+    const handler = new FetchHandler(
+      'http://node:7777/rpc',
+      fetchMock as unknown as typeof fetch,
+      8_000,
+    );
 
     await handler.processCall(RpcRequest.defaultRpcRequest(Method.GetStatus, {}));
 
@@ -38,7 +42,11 @@ describe('FetchHandler request envelope', () => {
       sentBody = (init as RequestInit).body as string;
       return jsonResponse({ jsonrpc: '2.0', id: '1', result: {} });
     });
-    const handler = new FetchHandler('http://node:7777/rpc', fetchMock as unknown as typeof fetch, 8_000);
+    const handler = new FetchHandler(
+      'http://node:7777/rpc',
+      fetchMock as unknown as typeof fetch,
+      8_000,
+    );
 
     const params = { entity_identifier: { PublicKey: '0202' + 'a'.repeat(64) } };
     await handler.processCall(RpcRequest.defaultRpcRequest(Method.GetStateEntity, params));
@@ -52,8 +60,14 @@ describe('FetchHandler request envelope', () => {
   it('maps a node result onto the RpcResponse the SDK client expects', async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: '1', result: { api_version: '2.0.0' } }));
-    const handler = new FetchHandler('http://node:7777/rpc', fetchMock as unknown as typeof fetch, 8_000);
+      .mockResolvedValue(
+        jsonResponse({ jsonrpc: '2.0', id: '1', result: { api_version: '2.0.0' } }),
+      );
+    const handler = new FetchHandler(
+      'http://node:7777/rpc',
+      fetchMock as unknown as typeof fetch,
+      8_000,
+    );
 
     const out = await handler.processCall(RpcRequest.defaultRpcRequest(Method.GetStatus, {}));
 
@@ -62,10 +76,18 @@ describe('FetchHandler request envelope', () => {
   });
 
   it('surfaces a JSON-RPC error so the SDK client can throw on it', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: '1', error: { code: -32600, message: 'Invalid Request' } }));
-    const handler = new FetchHandler('http://node:7777/rpc', fetchMock as unknown as typeof fetch, 8_000);
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        jsonrpc: '2.0',
+        id: '1',
+        error: { code: -32600, message: 'Invalid Request' },
+      }),
+    );
+    const handler = new FetchHandler(
+      'http://node:7777/rpc',
+      fetchMock as unknown as typeof fetch,
+      8_000,
+    );
 
     const out = await handler.processCall(RpcRequest.defaultRpcRequest(Method.GetStatus, {}));
 
@@ -78,10 +100,14 @@ describe('FetchHandler request envelope', () => {
 
   it('raises http_<status> when the node returns a non-2xx response', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('down', { status: 503 }));
-    const handler = new FetchHandler('http://node:7777/rpc', fetchMock as unknown as typeof fetch, 8_000);
-
-    await expect(handler.processCall(RpcRequest.defaultRpcRequest(Method.GetStatus, {}))).rejects.toThrow(
-      'http_503',
+    const handler = new FetchHandler(
+      'http://node:7777/rpc',
+      fetchMock as unknown as typeof fetch,
+      8_000,
     );
+
+    await expect(
+      handler.processCall(RpcRequest.defaultRpcRequest(Method.GetStatus, {})),
+    ).rejects.toThrow('http_503');
   });
 });

@@ -20,7 +20,13 @@ export const PaySuccessArtifact = z.object({
 });
 
 export const RejectionArtifact = z.object({
-  kind: z.enum(['receiver_not_allowed', 'over_max_single_payment', 'over_daily_limit', 'expired', 'duplicate_nonce']),
+  kind: z.enum([
+    'receiver_not_allowed',
+    'over_max_single_payment',
+    'over_daily_limit',
+    'expired',
+    'duplicate_nonce',
+  ]),
   deployHash: Hex32,
   errorCode: z.number().int(),
   finalizedHeight: z.number().int().nonnegative(),

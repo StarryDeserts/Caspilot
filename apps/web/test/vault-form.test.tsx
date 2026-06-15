@@ -22,8 +22,12 @@ describe('VaultForm', () => {
   it('emits normalized values on submit', () => {
     const onSubmit = vi.fn();
     render(<VaultForm onSubmit={onSubmit} />);
-    fireEvent.change(screen.getByLabelText(/admin/i), { target: { value: '00' + 'aa'.repeat(32) } });
-    fireEvent.change(screen.getByLabelText(/cep-18 contract/i), { target: { value: '00' + 'bb'.repeat(32) } });
+    fireEvent.change(screen.getByLabelText(/admin/i), {
+      target: { value: '00' + 'aa'.repeat(32) },
+    });
+    fireEvent.change(screen.getByLabelText(/cep-18 contract/i), {
+      target: { value: '00' + 'bb'.repeat(32) },
+    });
     fireEvent.change(screen.getByLabelText(/max single payment/i), { target: { value: '1000' } });
     fireEvent.change(screen.getByLabelText(/daily limit/i), { target: { value: '5000' } });
     fireEvent.change(screen.getByLabelText(/valid until/i), { target: { value: '2026-12-31' } });

@@ -3,7 +3,12 @@ import { assembleTier1Artifacts } from '../scripts/dump-tier1-artifacts.js';
 import { TierOneArtifactsSchema } from '../src/schema.js';
 
 const VAULT = { contractHash: 'aa'.repeat(32), deployHash: 'bb'.repeat(32), finalizedHeight: 1 };
-const PAY = { deployHash: 'cc'.repeat(32), amount: '50', receiver: `00${'cc'.repeat(32)}`, finalizedHeight: 2 };
+const PAY = {
+  deployHash: 'cc'.repeat(32),
+  amount: '50',
+  receiver: `00${'cc'.repeat(32)}`,
+  finalizedHeight: 2,
+};
 
 describe('assembleTier1Artifacts', () => {
   it('packs vault + paySuccess + rejections into a valid TierOneArtifacts', () => {
@@ -14,8 +19,18 @@ describe('assembleTier1Artifacts', () => {
       vault: VAULT,
       paySuccess: PAY,
       rejections: [
-        { kind: 'receiver_not_allowed', deployHash: 'dd'.repeat(32), errorCode: 3, finalizedHeight: 3 },
-        { kind: 'over_max_single_payment', deployHash: 'ee'.repeat(32), errorCode: 4, finalizedHeight: 4 },
+        {
+          kind: 'receiver_not_allowed',
+          deployHash: 'dd'.repeat(32),
+          errorCode: 3,
+          finalizedHeight: 3,
+        },
+        {
+          kind: 'over_max_single_payment',
+          deployHash: 'ee'.repeat(32),
+          errorCode: 4,
+          finalizedHeight: 4,
+        },
       ],
     });
     expect(() => TierOneArtifactsSchema.parse(out)).not.toThrow();
@@ -43,7 +58,14 @@ describe('assembleTier1Artifacts', () => {
         chainspec: 'casper-test',
         vault: VAULT,
         paySuccess: PAY,
-        rejections: [{ kind: 'receiver_not_allowed', deployHash: 'dd'.repeat(32), errorCode: 3, finalizedHeight: 3 }],
+        rejections: [
+          {
+            kind: 'receiver_not_allowed',
+            deployHash: 'dd'.repeat(32),
+            errorCode: 3,
+            finalizedHeight: 3,
+          },
+        ],
       }),
     ).toThrow(/chainspec/);
   });

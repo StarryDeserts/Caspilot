@@ -7,10 +7,16 @@ describe('IntentForm', () => {
   it('submits with valid hex addresses + amount', () => {
     const onSubmit = vi.fn();
     render(<IntentForm defaults={{ network: 'casper:casper-test' }} onSubmit={onSubmit} />);
-    fireEvent.change(screen.getByLabelText(/agent/i), { target: { value: '00' + 'aa'.repeat(32) } });
-    fireEvent.change(screen.getByLabelText(/receiver/i), { target: { value: '00' + 'bb'.repeat(32) } });
+    fireEvent.change(screen.getByLabelText(/agent/i), {
+      target: { value: '00' + 'aa'.repeat(32) },
+    });
+    fireEvent.change(screen.getByLabelText(/receiver/i), {
+      target: { value: '00' + 'bb'.repeat(32) },
+    });
     fireEvent.change(screen.getByLabelText(/token/i), { target: { value: 'cspr-cep18' } });
-    fireEvent.change(screen.getByLabelText(/contract/i), { target: { value: '00' + 'cc'.repeat(32) } });
+    fireEvent.change(screen.getByLabelText(/contract/i), {
+      target: { value: '00' + 'cc'.repeat(32) },
+    });
     fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '100' } });
     fireEvent.click(screen.getByRole('button', { name: /create intent/i }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -20,9 +26,13 @@ describe('IntentForm', () => {
     const onSubmit = vi.fn();
     render(<IntentForm defaults={{ network: 'casper:casper-test' }} onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText(/agent/i), { target: { value: 'not-hex' } });
-    fireEvent.change(screen.getByLabelText(/receiver/i), { target: { value: '00' + 'bb'.repeat(32) } });
+    fireEvent.change(screen.getByLabelText(/receiver/i), {
+      target: { value: '00' + 'bb'.repeat(32) },
+    });
     fireEvent.change(screen.getByLabelText(/token/i), { target: { value: 'cspr-cep18' } });
-    fireEvent.change(screen.getByLabelText(/contract/i), { target: { value: '00' + 'cc'.repeat(32) } });
+    fireEvent.change(screen.getByLabelText(/contract/i), {
+      target: { value: '00' + 'cc'.repeat(32) },
+    });
     fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '100' } });
     fireEvent.click(screen.getByRole('button', { name: /create intent/i }));
     expect(onSubmit).not.toHaveBeenCalled();
