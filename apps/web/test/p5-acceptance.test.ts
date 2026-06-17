@@ -10,8 +10,8 @@ describe('P5 acceptance', () => {
 
   it('vault + intents pages are present', () => {
     const r = resolve(__dirname, '..');
-    expect(existsSync(`${r}/app/vaults/page.tsx`)).toBe(true);
-    expect(existsSync(`${r}/app/intents/page.tsx`)).toBe(true);
-    expect(existsSync(`${r}/app/intents/[id]/page.tsx`)).toBe(true);
+    expect(existsSync(`${r}/app/(app)/vaults/page.tsx`)).toBe(true);
+    expect(existsSync(`${r}/app/(app)/intents/page.tsx`)).toBe(true);
+    expect(existsSync(`${r}/app/(app)/intents/[id]/page.tsx`)).toBe(true);
   });
 });

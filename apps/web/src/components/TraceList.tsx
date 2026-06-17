@@ -1,4 +1,5 @@
 import { StateBadge } from './StateBadge.js';
+import { sanitize } from '../lib/redact.js';
 
 export interface TraceEntry {
   intentId: string;
@@ -6,31 +7,6 @@ export interface TraceEntry {
   atMs: number;
   kind: string;
   payload?: unknown;
-}
-
-const FRONTEND_FORBIDDEN_KEYS = new Set([
-  'privateKey',
-  'PRIVATE_KEY',
-  'mnemonic',
-  'seed',
-  'apiKey',
-  'API_KEY',
-  'CSPR_CLOUD_KEY',
-  'reasoning',
-  'chainOfThought',
-  'prompt',
-  'env',
-]);
-
-function sanitize(value: unknown): unknown {
-  if (value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.map(sanitize);
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (FRONTEND_FORBIDDEN_KEYS.has(k)) continue;
-    out[k] = sanitize(v);
-  }
-  return out;
 }
 
 export function TraceList({ entries }: { entries: TraceEntry[] }) {

@@ -1,19 +1,27 @@
-const TONE: Record<string, string> = {
-  DRAFT: 'bg-zinc-700 text-zinc-100',
-  POLICY_VALIDATED: 'bg-blue-700 text-blue-50',
-  PAYMENT_REQUIRED: 'bg-amber-700 text-amber-50',
-  PAYMENT_VERIFIED: 'bg-amber-600 text-amber-50',
-  READY_TO_SUBMIT: 'bg-indigo-700 text-indigo-50',
-  SIGNED_RECEIVED: 'bg-indigo-600 text-indigo-50',
-  ACCEPTED_BY_NODE: 'bg-indigo-500 text-indigo-50',
-  EXECUTED: 'bg-emerald-600 text-emerald-50',
-  FINALIZED: 'bg-green-600 text-green-50',
-  EXECUTION_FAILED: 'bg-red-700 text-red-50',
-  REJECTED: 'bg-red-800 text-red-50',
-  TIMEOUT: 'bg-zinc-600 text-zinc-50',
+// §6 FSM(12) → 6 semantic badge buckets. The buckets drive color via
+// design-system.css `.badge.{bucket}` classes; the raw FSM string is always
+// rendered as the label so audit/trace consumers stay literal.
+const BUCKET: Record<string, string> = {
+  DRAFT: 'draft',
+  POLICY_VALIDATED: 'validated',
+  PAYMENT_REQUIRED: 'payment',
+  PAYMENT_VERIFIED: 'inflight',
+  READY_TO_SUBMIT: 'inflight',
+  SIGNED_RECEIVED: 'inflight',
+  ACCEPTED_BY_NODE: 'inflight',
+  EXECUTED: 'executed',
+  FINALIZED: 'executed',
+  REJECTED: 'failed',
+  EXECUTION_FAILED: 'failed',
+  TIMEOUT: 'failed',
 };
 
-export function StateBadge({ state }: { state: string }) {
-  const tone = TONE[state] ?? 'bg-zinc-700 text-zinc-100';
-  return <span className={`inline-block px-2 py-0.5 rounded text-xs ${tone}`}>{state}</span>;
+export function StateBadge({ state, size }: { state: string; size?: 'lg' }) {
+  const bucket = BUCKET[state] ?? 'draft';
+  return (
+    <span className={`badge ${bucket}${size === 'lg' ? ' lg' : ''}`}>
+      <span className="bdot" />
+      {state}
+    </span>
+  );
 }

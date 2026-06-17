@@ -1,11 +1,18 @@
 import './globals.css';
+import './design-system.css';
+import type { ReactNode } from 'react';
+import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
 
-export const metadata = { title: 'Caspilot', description: 'Casper agentic copilot' };
+const display = Bricolage_Grotesque({ subsets: ['latin'], variable: '--display', display: 'swap' });
+const body = Hanken_Grotesk({ subsets: ['latin'], variable: '--body', display: 'swap' });
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--mono', display: 'swap' });
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const metadata = { title: 'Caspilot', description: 'autonomy you can audit' };
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-zinc-950 text-zinc-100 min-h-screen">{children}</body>
+    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }
