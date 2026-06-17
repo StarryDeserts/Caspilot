@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { intentsRouter, type IntentRouterDeps } from './intents/router.js';
+import { vaultsRouter } from './vaults/router.js';
 
 export interface AppEnv {
   expectedChainspec: string;
@@ -16,6 +17,7 @@ export function buildApp(opts: BuildAppOptions) {
   app.get('/version', (c) => c.json({ chainspec: opts.env.expectedChainspec }));
   if (opts.deps) {
     app.route('/intents', intentsRouter(opts.deps));
+    app.route('/vaults', vaultsRouter(opts.deps));
   }
   return app;
 }

@@ -141,4 +141,45 @@ describe('CaspilotApi', () => {
     });
     await expect(api.validatePolicy('int_missing')).rejects.toThrow(/validatePolicy 404/);
   });
+
+  it('listVaults() GETs /vaults and unwraps the envelope to an array', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ vaults: [{ id: 'vault_abc', usedTodayAtomic: '0' }] }), {
+          status: 200,
+        }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    const rows = await api.listVaults();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api.test/vaults');
+    expect(rows).toEqual([{ id: 'vault_abc', usedTodayAtomic: '0' }]);
+  });
+
+  it('getVault(id) GETs /vaults/:id and returns the detail', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ id: 'vault_abc', recentDebits: [] }), { status: 200 }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    const v = await api.getVault('vault_abc');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api.test/vaults/vault_abc');
+    expect(v.id).toBe('vault_abc');
+  });
+
+  it('getVault(id) throws via this.error on a 404', async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ error: 'not_found' }), { status: 404 }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    await expect(api.getVault('vault_missing')).rejects.toThrow(/getVault 404/);
+  });
 });

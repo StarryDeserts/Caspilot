@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, inArray, lte } from 'drizzle-orm';
+import { and, desc, eq, inArray, lte } from 'drizzle-orm';
 import type { CasperPublicKeyHex, Cep18PackageHashHex } from '@caspilot/x402';
 import type { SignerRole } from './types.js';
 import type { SignerGuardDb } from './db.js';
@@ -19,12 +19,27 @@ export type ReserveResult =
   | { ok: true; reservationId: string }
   | { ok: false; reason: 'day_cap_exceeded' | 'reservation_conflict' };
 
+// Read scope shared by the projection queries: the same (role, pk, token) tuple
+// the day-cap index is keyed on, so usedOnDay/listForSigner hit ix_signer_spend_day.
+export interface SpendQueryScope {
+  signerRole: SignerRole;
+  signerPk: CasperPublicKeyHex;
+  token: Cep18PackageHashHex;
+}
+
 export interface SpendLedger {
   reserve(reservation: SpendReservation, dayCapAtomic: string): Promise<ReserveResult>;
   commit(reservationId: string): Promise<void>;
   release(reservationId: string): Promise<void>;
   releaseExpired(nowMs: number, ttlMs: number): Promise<number>;
   findByIntentId(intentId: string): SignerSpendLedgerRow | null;
+  // Atomic sum of reserved+committed spend on a day (released excluded — that
+  // budget was returned). Fails closed (throws) on a non-digit row, mirroring
+  // reserve()'s cap-sum, rather than under-count.
+  usedOnDay(scope: SpendQueryScope & { dayUtc: string }): string;
+  // Recent debits newest-first: reserved+committed rows only (a released hold is
+  // not a debit), capped at limit. Read-only projection for the vault view.
+  listForSigner(scope: SpendQueryScope & { limit: number }): SignerSpendLedgerRow[];
 }
 
 // A valid atomic amount is one or more ASCII digits: no sign, no decimal
@@ -145,6 +160,41 @@ export function makeSpendLedger(db: SignerGuardDb, clock: () => number = Date.no
           .where(eq(signerSpendLedger.intentId, intentId))
           .all()[0] ?? null
       );
+    },
+
+    usedOnDay({ signerRole, signerPk, token, dayUtc }): string {
+      const rows = db
+        .select({ amount: signerSpendLedger.amount })
+        .from(signerSpendLedger)
+        .where(
+          and(
+            eq(signerSpendLedger.signerRole, signerRole),
+            eq(signerSpendLedger.signerPk, signerPk),
+            eq(signerSpendLedger.token, token),
+            eq(signerSpendLedger.dayUtc, dayUtc),
+            inArray(signerSpendLedger.status, ['reserved', 'committed']),
+          ),
+        )
+        .all();
+      const sum = rows.reduce((acc, row) => acc + parseAtomic('row.amount', row.amount), 0n);
+      return sum.toString();
+    },
+
+    listForSigner({ signerRole, signerPk, token, limit }): SignerSpendLedgerRow[] {
+      return db
+        .select()
+        .from(signerSpendLedger)
+        .where(
+          and(
+            eq(signerSpendLedger.signerRole, signerRole),
+            eq(signerSpendLedger.signerPk, signerPk),
+            eq(signerSpendLedger.token, token),
+            inArray(signerSpendLedger.status, ['reserved', 'committed']),
+          ),
+        )
+        .orderBy(desc(signerSpendLedger.createdAt))
+        .limit(limit)
+        .all();
     },
   };
 }

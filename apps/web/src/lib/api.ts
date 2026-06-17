@@ -48,6 +48,38 @@ export interface MarkExecutedResult {
   deployHash: string;
 }
 
+// A debit against a vault's day cap: a reserved (held) or committed (executed)
+// spend. A released hold is NOT a debit — the server omits it.
+export interface RecentDebit {
+  amount: string;
+  status: 'reserved' | 'committed';
+  intentId: string;
+  traceId: string;
+  atMs: number;
+}
+
+// Read-only projection of the one live SignerGuardPolicy + today's ledger usage.
+// Only fields that actually exist on the policy — no invented expiry/valid-until.
+export interface VaultSummary {
+  id: string;
+  signerRole: string;
+  token: string;
+  contract: string;
+  receiverPolicy: string;
+  allowedReceivers: string[];
+  maxSinglePaymentAtomic: string;
+  perDayCapAtomic: string;
+  usedTodayAtomic: string;
+  dayUtc: string;
+  policyDigest: string;
+}
+
+export interface VaultDetail extends VaultSummary {
+  allowedChainIds: string[];
+  requireTraceId: boolean;
+  recentDebits: RecentDebit[];
+}
+
 export interface CaspilotApiOptions {
   baseUrl: string;
   fetch?: typeof fetch;
@@ -133,6 +165,19 @@ export class CaspilotApi {
     });
     if (!res.ok) throw await this.error('reject', res);
     return (await res.json()) as { id: string; state: string };
+  }
+
+  async listVaults(): Promise<VaultSummary[]> {
+    const res = await this.fetcher(`${this.baseUrl}/vaults`);
+    if (!res.ok) throw await this.error('listVaults', res);
+    const body = (await res.json()) as { vaults: VaultSummary[] };
+    return body.vaults;
+  }
+
+  async getVault(id: string): Promise<VaultDetail> {
+    const res = await this.fetcher(`${this.baseUrl}/vaults/${encodeURIComponent(id)}`);
+    if (!res.ok) throw await this.error('getVault', res);
+    return (await res.json()) as VaultDetail;
   }
 
   // Surface the server's response body (e.g. a 403/409 authorization reason)

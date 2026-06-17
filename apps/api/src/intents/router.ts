@@ -30,14 +30,18 @@ export interface IntentRouterDeps {
   now?: () => number;
 }
 
+// Single-signer demo: the spend ledger keys day-cap + replay accounting on a
+// fixed placeholder pk, never a real signing key. Actual signing stays behind
+// SignerGuard; this id only groups reservations for one logical signer. The
+// vault projection reads usage under this same key, so it lives here as the one
+// source of truth — if reader and writer drift, usage silently reads zero.
+export const SIGNER_PK_PLACEHOLDER = `01${'00'.repeat(32)}`;
+
 export function intentsRouter(deps: IntentRouterDeps): Hono {
   const r = new Hono();
   const now = deps.now ?? (() => Date.now());
   const redactor = new PlannerRedactor();
-  // Single-signer demo: the spend ledger keys day-cap + replay accounting on a
-  // fixed placeholder pk, never a real signing key. Actual signing stays behind
-  // SignerGuard; this id only groups reservations for one logical signer.
-  const signerPkPlaceholder = `01${'00'.repeat(32)}`;
+  const signerPkPlaceholder = SIGNER_PK_PLACEHOLDER;
   const state: Map<
     string,
     {
