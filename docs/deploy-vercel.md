@@ -96,71 +96,31 @@ Set a **persistent DB path** via env (see wiring below) and mount a volume there
 
 ### Enabling the live API
 
-> This is the one change that turns the API from a health-check stub into a working intent backend. It is **safe**: the API never holds a real signing key — on-chain broadcast is the harness's job. The API only does intent lifecycle + policy + spend-ledger + audit, so it uses a non-broadcasting `local_dev` signer placeholder.
+> The API is **already wired** to serve the full intent backend — no code change is needed to turn it on. It is **safe by construction**: the API never holds a real signing key (on-chain broadcast is the harness's job), so it carries a non-broadcasting `local_dev` signer placeholder and only does intent lifecycle + policy + spend-ledger + audit.
 
-**The gap:** `apps/api/src/index.ts` today builds the app *without* dependencies, so `buildApp` mounts only `/healthz` and `/version` — the `/intents` routes are never wired:
+`apps/api/src/index.ts` assembles its dependencies with `buildApiDeps({ dbPath })` and passes them into `buildApp`, which mounts `/intents` (create, list, validate-policy, mark-executed, trace, reject) alongside `/healthz` and `/version`:
 
 ```ts
-// apps/api/src/index.ts  (current)
-const app = buildApp({ env: { expectedChainspec } });   // ← no deps → no /intents
+// apps/api/src/index.ts
+const dbPath = process.env.CASPILOT_DB_PATH ?? './caspilot.db';
+const deps = buildApiDeps({ dbPath });
+const app = buildApp({ env: { expectedChainspec }, deps });
+serve({ fetch: app.fetch, port });
 ```
 
-**The fix:** assemble `IntentRouterDeps` and pass them in. This mirrors the test assembly in `apps/api/test/_stubs.ts`, but with a **persistent** SQLite path. Replace `index.ts` with:
+`buildApiDeps` (in `apps/api/src/deps.ts`) opens the SQLite ledger/audit store at `dbPath`, runs the audit migrations, and builds the SignerGuard around a **non-broadcasting** signer whose `sign()` throws — the demo routes never call it, and any future caller that tries to sign from the API fails loudly instead of leaking authority:
 
 ```ts
-import { serve } from '@hono/node-server';
-import { buildApp } from './server.js';
-import {
-  openSignerGuardDb,
-  makeSpendLedger,
-  makeSignerGuard,
-  type RawSigner,
-  type SignerGuardPolicy,
-} from '@caspilot/signer-guard';
-import { AuditTraceStore, runAuditMigrations } from '@caspilot/audit-trace';
-
-const port = Number(process.env.PORT ?? 8787);
-const expectedChainspec = process.env.EXPECTED_CHAINSPEC ?? 'casper-test';
-
-// Persistent ledger (mount a volume at this path on your host).
-const dbPath = process.env.CASPILOT_DB_PATH ?? './caspilot.db';
-const handle = openSignerGuardDb(dbPath);
-runAuditMigrations(handle.sqlite);
-
-const spendLedger = makeSpendLedger(handle.db);
-const audit = new AuditTraceStore(handle.sqlite);
-
-// The API never broadcasts on-chain, so it carries a non-signing local_dev
-// placeholder. Real signing + broadcast happen only in apps/harness, where a
-// detached signature — never the key — crosses into the deploy adapter.
-const apiSigner: RawSigner = {
+const nonBroadcastingSigner: RawSigner = {
   signerRole: 'local_dev',
   signerPk: `01${'ab'.repeat(32)}`,
   async sign() {
     throw new Error('apps/api does not broadcast — signing belongs to the harness');
   },
 };
-const guard = makeSignerGuard({ spendLedger, signer: apiSigner, clock: () => Date.now() });
-
-// Policy: load from config/env in a real deployment. Demo-safe defaults below.
-const policy: SignerGuardPolicy = {
-  signerRole: 'local_dev',
-  allowedChainIds: ['casper:casper-test'],
-  allowedContractPackages: [`00${'cc'.repeat(32)}`],
-  allowedTokens: ['cspr-test-cep18'],
-  receiverPolicy: 'allowlist',
-  allowedReceivers: [`00${'bb'.repeat(32)}`],
-  maxSinglePaymentAtomic: '500',
-  perDayCapAtomic: '100000',
-  requireTraceId: false,
-};
-
-const app = buildApp({ env: { expectedChainspec }, deps: { guard, policy, audit, spendLedger } });
-serve({ fetch: app.fetch, port });
-console.log(`caspilot-api listening on :${port}`);
 ```
 
-> Wire this behind a test first (TDD): assert that `POST /intents` returns `201` and `GET /intents/:id/trace` returns the redacted trace against the assembled app, before changing `index.ts`. Then `pnpm --filter api build && pnpm --filter api start` and curl `/intents`.
+For a real deployment, set `CASPILOT_DB_PATH` to a mounted volume and pass your own `SignerGuardPolicy` to `buildApiDeps` — the built-in `DEFAULT_DEMO_POLICY` only allows the canonical Tier-1 demo intent, so don't ship it as-is. The lifecycle is covered test-first in `apps/api/test/` (e.g. `POST /intents` → `201`, `GET /intents/:id/trace` → redacted trace); run `pnpm --filter api build && pnpm --filter api start` and curl `/intents` to smoke it.
 
 ### API host environment variables
 
@@ -199,7 +159,7 @@ For a recording where you don't want to stand up a host, run the API locally (`p
 
 ## Checklist
 
-- [ ] Wire `IntentRouterDeps` into `apps/api/src/index.ts` (test-first) so `/intents` serves.
+- [ ] Supply a real `SignerGuardPolicy` to `buildApiDeps` (don't ship `DEFAULT_DEMO_POLICY`); `/intents` is already wired into `index.ts`.
 - [ ] Deploy `apps/api` to a persistent host with a mounted volume at `CASPILOT_DB_PATH`; enable CORS for the Vercel origin.
 - [ ] Vercel project: Root Directory `apps/web`, build command `pnpm build:check`.
 - [ ] Set `NEXT_PUBLIC_CASPILOT_API_BASE` (the API URL) and `NEXT_PUBLIC_CASPER_NETWORK` on Vercel.

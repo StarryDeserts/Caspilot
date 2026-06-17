@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caspilot · Brand Mark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--canvas:#0A0A0B;--surface:#141417;--surface-2:#1C1C21;--hairline:#2A2A31;--text:#ECECEE;--text-muted:#9A9AA3;--accent:#FF5A1F;--display:'Bricolage Grotesque',sans-serif;--body:'Hanken Grotesk',sans-serif;--mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--canvas);color:var(--text);font-family:var(--body);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;padding:48px 24px 96px}
+.page{max-width:920px;margin:0 auto}
+.page-head{margin-bottom:48px;border-bottom:1px solid var(--hairline);padding-bottom:28px}
+.page-head h1{font-family:var(--display);font-weight:700;font-size:32px;letter-spacing:-.02em;margin-bottom:8px}
+.page-head p{color:var(--text-muted);max-width:60ch}
+.kicker{font-family:var(--mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.variant{margin-bottom:48px}
+.variant h2{font-family:var(--display);font-weight:600;font-size:18px;margin-bottom:4px}
+.variant .vnote{color:var(--text-muted);font-size:13px;margin-bottom:18px}
+.stage{background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:40px;display:flex;align-items:center;gap:40px;flex-wrap:wrap;position:relative;overflow:hidden}
+.stage.center{justify-content:center}
+.stage.light{background:#FFFFFF;border-color:#E5E5E8}
+.glow-wrap{position:relative;display:inline-flex;align-items:center}
+.glow-wrap::before{content:"";position:absolute;left:14%;top:50%;width:64px;height:64px;transform:translate(-50%,-50%);background:radial-gradient(circle at center,rgba(255,90,31,.22),rgba(255,90,31,0) 70%);filter:blur(10px);pointer-events:none;z-index:0}
+.glow-wrap > *{position:relative;z-index:1}
+.lockup{display:inline-flex;align-items:center;gap:12px}
+.lockup .cas-word{font-family:var(--display);font-weight:600;font-size:34px;letter-spacing:-.01em;color:var(--text)}
+.lockup.light .cas-word{color:var(--canvas)}
+.lockup-stack{display:inline-flex;flex-direction:column;gap:2px}
+.lockup-stack .cas-tag{font-family:var(--mono);font-size:11px;color:var(--text-muted)}
+.swatch-row{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.src{margin-top:16px}
+.src summary{font-family:var(--mono);font-size:11px;color:var(--text-muted);cursor:pointer;list-style:none;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:7px;user-select:none}
+.src summary:hover{color:var(--text)}
+.src summary::-webkit-details-marker{display:none}
+.src pre{margin-top:10px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--text-muted);white-space:pre}
+.specs{background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:24px;margin-top:8px}
+.specs h3{font-family:var(--display);font-weight:600;font-size:15px;margin-bottom:14px}
+.spec-row{display:flex;gap:16px;padding:10px 0;border-bottom:1px solid var(--hairline);font-size:13px}
+.spec-row:last-child{border-bottom:none}
+.spec-row .sk{font-family:var(--mono);font-size:11px;color:var(--text-muted);width:140px;flex-shrink:0}
+.spec-row .sv{color:var(--text)}
+.clearbox{display:inline-flex;align-items:center;justify-content:center;padding:24px;border:1px dashed var(--hairline);border-radius:10px}
+@media(max-width:560px){.stage{padding:28px;gap:24px}.lockup .cas-word{font-size:28px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-head">
+    <div class="kicker">BRAND MARK</div>
+    <h1>Caspilot — the heading dial</h1>
+    <p>An instrument bezel shaped like a <b>C</b>, with a single slim compass needle pivoting from center and pointing out through the gap. The needle and its tip tick are the only amber. A pilot setting a heading — one accountable, authorized point.</p>
+  </div>
+
+  <!-- VARIANT 1 — PRIMARY HORIZONTAL LOCKUP -->
+  <div class="variant">
+    <div class="kicker">VARIANT 01</div>
+    <h2>Primary horizontal lockup</h2>
+    <p class="vnote">Glyph + 12px gap + “Caspilot” in Bricolage Grotesque 600, tracking -0.01em.</p>
+    <div class="stage">
+      <div class="glow-wrap">
+        <div class="lockup">
+          <svg width="44" height="44" viewBox="0 0 48 48" role="img" aria-labelledby="t-primary" style="--accent:#FF5A1F;color:#ECECEE">
+            <title id="t-primary">Caspilot</title>
+            <!-- instrument bezel: open ring (C), gap to the right -->
+            <path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+            <!-- compass needle: slim lance from center, out through the gap -->
+            <polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/>
+            <!-- pivot -->
+            <circle cx="24" cy="24" r="2.1" fill="currentColor"/>
+            <!-- tip tick -->
+            <rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/>
+          </svg>
+          <span class="cas-word">Caspilot</span>
+        </div>
+      </div>
+    </div>
+    <details class="src">
+      <summary>copy SVG source</summary>
+<pre>&lt;svg width="44" height="44" viewBox="0 0 48 48" role="img" aria-labelledby="t" style="--accent:#FF5A1F;color:#ECECEE"&gt;
+  &lt;title id="t"&gt;Caspilot&lt;/title&gt;
+  &lt;path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/&gt;
+  &lt;polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/&gt;
+  &lt;circle cx="24" cy="24" r="2.1" fill="currentColor"/&gt;
+  &lt;rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/&gt;
+&lt;/svg&gt;</pre>
+    </details>
+  </div>
+
+  <!-- VARIANT 1b — LOCKUP WITH TAGLINE -->
+  <div class="variant">
+    <div class="kicker">VARIANT 01 · WITH TAGLINE</div>
+    <h2>Lockup with tagline</h2>
+    <p class="vnote">Mono tagline “autonomy you can audit” beneath the wordmark, 11px JetBrains Mono, #9A9AA3.</p>
+    <div class="stage">
+      <div class="glow-wrap">
+        <div class="lockup">
+          <svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-labelledby="t-tag" style="--accent:#FF5A1F;color:#ECECEE">
+            <title id="t-tag">Caspilot</title>
+            <path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+            <polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/>
+            <circle cx="24" cy="24" r="2.1" fill="currentColor"/>
+            <rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/>
+          </svg>
+          <div class="lockup-stack">
+            <span class="cas-word" style="font-size:30px">Caspilot</span>
+            <span class="cas-tag">autonomy you can audit</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <details class="src">
+      <summary>copy lockup HTML</summary>
+<pre>&lt;div class="lockup"&gt;
+  &lt;svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-labelledby="t" style="--accent:#FF5A1F;color:#ECECEE"&gt;
+    &lt;title id="t"&gt;Caspilot&lt;/title&gt;
+    &lt;path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/&gt;
+    &lt;polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/&gt;
+    &lt;circle cx="24" cy="24" r="2.1" fill="currentColor"/&gt;
+    &lt;rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/&gt;
+  &lt;/svg&gt;
+  &lt;div&gt;
+    &lt;div style="font-family:'Bricolage Grotesque';font-weight:600;font-size:30px;letter-spacing:-.01em;color:#ECECEE"&gt;Caspilot&lt;/div&gt;
+    &lt;div style="font-family:'JetBrains Mono';font-size:11px;color:#9A9AA3"&gt;autonomy you can audit&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+    </details>
+  </div>
+    <!-- VARIANT 2 — GLYPH ONLY -->
+  <div class="variant">
+    <div class="kicker">VARIANT 02</div>
+    <h2>Glyph only</h2>
+    <p class="vnote">Square viewBox 0 0 48 48, optically centered with even clear-space.</p>
+    <div class="stage center">
+      <div class="glow-wrap">
+        <svg width="120" height="120" viewBox="0 0 48 48" role="img" aria-labelledby="t-glyph" style="--accent:#FF5A1F;color:#ECECEE">
+          <title id="t-glyph">Caspilot</title>
+          <path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/>
+          <circle cx="24" cy="24" r="2.1" fill="currentColor"/>
+          <rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/>
+        </svg>
+      </div>
+    </div>
+    <details class="src">
+      <summary>copy SVG source</summary>
+<pre>&lt;svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-labelledby="t" style="--accent:#FF5A1F;color:#ECECEE"&gt;
+  &lt;title id="t"&gt;Caspilot&lt;/title&gt;
+  &lt;path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/&gt;
+  &lt;polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/&gt;
+  &lt;circle cx="24" cy="24" r="2.1" fill="currentColor"/&gt;
+  &lt;rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/&gt;
+&lt;/svg&gt;</pre>
+    </details>
+  </div>
+
+  <!-- VARIANT 3 — FAVICON -->
+  <div class="variant">
+    <div class="kicker">VARIANT 03</div>
+    <h2>Favicon · 16px-legible</h2>
+    <p class="vnote">Simplified glyph: ring + amber tip tick kept; fine needle thinned to a short stub so it doesn’t muddy at 16px. Stroke bumped to 3.5 for weight at small size.</p>
+    <div class="stage" style="gap:28px">
+      <!-- rendered at true 16px -->
+      <div class="clearbox" style="background:var(--surface-2)">
+        <svg width="16" height="16" viewBox="0 0 32 32" role="img" aria-labelledby="t-fav16" style="--accent:#FF5A1F;color:#ECECEE">
+          <title id="t-fav16">Caspilot</title>
+          <path d="M23 9 A11 11 0 1 0 23 23" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polygon points="16,16 27,16 24,13.6 24,18.4" fill="var(--accent)"/>
+          <circle cx="16" cy="16" r="2" fill="currentColor"/>
+        </svg>
+      </div>
+      <!-- enlarged for inspection -->
+      <div class="clearbox" style="background:var(--surface-2)">
+        <svg width="96" height="96" viewBox="0 0 32 32" role="img" aria-labelledby="t-fav96" style="--accent:#FF5A1F;color:#ECECEE">
+          <title id="t-fav96">Caspilot</title>
+          <path d="M23 9 A11 11 0 1 0 23 23" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polygon points="16,16 27,16 24,13.6 24,18.4" fill="var(--accent)"/>
+          <circle cx="16" cy="16" r="2" fill="currentColor"/>
+        </svg>
+      </div>
+      <span class="cas-tag" style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">16px · true size&nbsp;&nbsp;|&nbsp;&nbsp;96px · inspection</span>
+    </div>
+    <details class="src">
+      <summary>copy SVG source</summary>
+<pre>&lt;svg width="16" height="16" viewBox="0 0 32 32" role="img" aria-labelledby="t" style="--accent:#FF5A1F;color:#ECECEE"&gt;
+  &lt;title id="t"&gt;Caspilot&lt;/title&gt;
+  &lt;path d="M23 9 A11 11 0 1 0 23 23" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/&gt;
+  &lt;polygon points="16,16 27,16 24,13.6 24,18.4" fill="var(--accent)"/&gt;
+  &lt;circle cx="16" cy="16" r="2" fill="currentColor"/&gt;
+&lt;/svg&gt;</pre>
+    </details>
+  </div>
+
+  <!-- VARIANT 4 — MONOCHROME -->
+  <div class="variant">
+    <div class="kicker">VARIANT 04</div>
+    <h2>Monochrome</h2>
+    <p class="vnote">One-color versions for constrained contexts. Needle keeps its lance shape; the amber simply collapses to the single ink color.</p>
+    <div class="swatch-row">
+      <!-- all #ECECEE on dark -->
+      <div class="stage center" style="flex:1;min-width:240px">
+        <svg width="96" height="96" viewBox="0 0 48 48" role="img" aria-labelledby="t-mono-d" style="color:#ECECEE">
+          <title id="t-mono-d">Caspilot</title>
+          <path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="currentColor"/>
+          <circle cx="24" cy="24" r="2.1" fill="currentColor"/>
+          <rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="currentColor"/>
+        </svg>
+      </div>
+      <!-- all #0A0A0B on light -->
+      <div class="stage center light" style="flex:1;min-width:240px">
+        <svg width="96" height="96" viewBox="0 0 48 48" role="img" aria-labelledby="t-mono-l" style="color:#0A0A0B">
+          <title id="t-mono-l">Caspilot</title>
+          <path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="currentColor"/>
+          <circle cx="24" cy="24" r="2.1" fill="currentColor"/>
+          <rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="currentColor"/>
+        </svg>
+      </div>
+    </div>
+    <p class="vnote" style="margin-top:14px">Left: all <code style="font-family:var(--mono)">#ECECEE</code> on obsidian. Right: all <code style="font-family:var(--mono)">#0A0A0B</code> on white. Both use <code style="font-family:var(--mono)">currentColor</code> everywhere — recolor in one place.</p>
+  </div>
+
+  <!-- VARIANT 5 — ON-LIGHT -->
+  <div class="variant">
+    <div class="kicker">VARIANT 05</div>
+    <h2>On-light</h2>
+    <p class="vnote">Primary lockup on a #FFFFFF card — proves it survives inversion. Ring takes the dark ink; needle keeps amber.</p>
+    <div class="stage light">
+      <div class="lockup light">
+        <svg width="44" height="44" viewBox="0 0 48 48" role="img" aria-labelledby="t-light" style="--accent:#FF5A1F;color:#0A0A0B">
+          <title id="t-light">Caspilot</title>
+          <path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/>
+          <circle cx="24" cy="24" r="2.1" fill="currentColor"/>
+          <rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/>
+        </svg>
+        <span class="cas-word">Caspilot</span>
+      </div>
+    </div>
+    <details class="src">
+      <summary>copy SVG source</summary>
+<pre>&lt;svg width="44" height="44" viewBox="0 0 48 48" role="img" aria-labelledby="t" style="--accent:#FF5A1F;color:#0A0A0B"&gt;
+  &lt;title id="t"&gt;Caspilot&lt;/title&gt;
+  &lt;path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/&gt;
+  &lt;polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/&gt;
+  &lt;circle cx="24" cy="24" r="2.1" fill="currentColor"/&gt;
+  &lt;rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/&gt;
+&lt;/svg&gt;</pre>
+    </details>
+  </div>
+
+  <!-- SPECS: clear-space + min-size -->
+  <div class="variant">
+    <div class="kicker">USAGE</div>
+    <h2>Clear-space & minimum size</h2>
+    <div class="swatch-row" style="margin-bottom:18px">
+      <div class="clearbox" style="position:relative;padding:16px;background:var(--surface-2)">
+        <!-- clear-space = ring stroke-radius (16) on all sides; shown as dashed inset -->
+        <div style="position:relative;padding:16px;border:1px dashed var(--hairline);border-radius:8px">
+          <svg width="64" height="64" viewBox="0 0 48 48" role="img" aria-labelledby="t-cs" style="--accent:#FF5A1F;color:#ECECEE">
+            <title id="t-cs">Caspilot</title>
+            <path d="M34.4 13.2 A16 16 0 1 0 34.4 34.8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+            <polygon points="24,24 40.5,21.7 44,24 40.5,26.3" fill="var(--accent)"/>
+            <circle cx="24" cy="24" r="2.1" fill="currentColor"/>
+            <rect x="43.2" y="22.4" width="2" height="3.2" rx="1" fill="var(--accent)"/>
+          </svg>
+        </div>
+      </div>
+      <div class="clearbox" style="background:var(--surface-2)">
+        <svg width="16" height="16" viewBox="0 0 32 32" role="img" aria-labelledby="t-min" style="--accent:#FF5A1F;color:#ECECEE">
+          <title id="t-min">Caspilot</title>
+          <path d="M23 9 A11 11 0 1 0 23 23" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <polygon points="16,16 27,16 24,13.6 24,18.4" fill="var(--accent)"/>
+          <circle cx="16" cy="16" r="2" fill="currentColor"/>
+        </svg>
+      </div>
+    </div>
+    <div class="specs">
+      <h3>Specification</h3>
+      <div class="spec-row"><span class="sk">clear space</span><span class="sv">Keep empty margin equal to the ring’s stroke-radius (≈ glyph ⅓) on all four sides. Nothing intrudes inside that band.</span></div>
+      <div class="spec-row"><span class="sk">minimum size</span><span class="sv">Glyph 16px (use the favicon variant below 24px). Wordmark lockup minimum 96px wide.</span></div>
+      <div class="spec-row"><span class="sk">accent</span><span class="sv">Amber <code style="font-family:var(--mono)">#FF5A1F</code> appears only on the needle and tip tick — never the ring or wordmark.</span></div>
+      <div class="spec-row"><span class="sk">ring color</span><span class="sv"><code style="font-family:var(--mono)">currentColor</code> — inherits text color (#ECECEE on dark, #0A0A0B on light).</span></div>
+      <div class="spec-row"><span class="sk">recolor</span><span class="sv">Set CSS <code style="font-family:var(--mono)">--accent</code> once to retint the needle; set <code style="font-family:var(--mono)">color</code> for the ring.</span></div>
+      <div class="spec-row"><span class="sk">never</span><span class="sv">No gradients inside the mark, no second accent, no rotation of the needle off the gap axis.</span></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

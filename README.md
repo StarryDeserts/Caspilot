@@ -131,7 +131,7 @@ pnpm --filter web dev          # Web on http://localhost:3001
 
 Open <http://localhost:3001> → **Intents** to draft a payment intent and **Intent detail** to watch its (redacted) audit trace.
 
-> **Note (honest status):** the production API entrypoint (`apps/api/src/index.ts`) currently serves only `/healthz` and `/version`; the full `/intents` lifecycle is exercised by the test suite and needs its dependencies wired into `index.ts` to serve over HTTP. The one-step wiring (with exact code) is in [`docs/deploy-vercel.md`](docs/deploy-vercel.md#enabling-the-live-api). The Tier-1 proof above is **independent of any hosting** — the deploy hashes are permanent on-chain.
+> **Note (honest status):** the production API entrypoint (`apps/api/src/index.ts`) serves the full `/intents` lifecycle — create, list, validate-policy, mark-executed, trace, and reject — alongside `/healthz` and `/version`, persisting the ledger and audit trace to SQLite (`CASPILOT_DB_PATH`). The API carries a **non-broadcasting `local_dev` signer** (its `sign()` throws): it never holds a real signing key, so on-chain broadcast stays the harness's job. Host setup — persistent volume, env, CORS — is in [`docs/deploy-vercel.md`](docs/deploy-vercel.md#enabling-the-live-api). The Tier-1 proof above is **independent of any hosting** — the deploy hashes are permanent on-chain.
 
 ### Reproduce the on-chain proof (optional, spends test-CSPR)
 
@@ -184,7 +184,7 @@ caspilot/
 ## Roadmap
 
 - ✅ **Tier-1 (mandatory)** — on-chain PolicyVault enforcement proven on casper-test, sealed into a schema-valid artifact.
-- ⏭️ **Wire the live API** — assemble `IntentRouterDeps` into `index.ts` so the intent lifecycle serves over HTTP (see deploy guide).
+- ✅ **Live API** — `index.ts` assembles `IntentRouterDeps` via `buildApiDeps`, so the full intent lifecycle serves over HTTP (see deploy guide).
 - ⏭️ **Step-by-step FSM** — replace the `mark-executed` demo fast-forward with the full intermediate state walk.
 - ⏭️ **Reservation sweeper** — wire `releaseExpired()` to a background job so abandoned reservations free budget.
 - ⏭️ **Tier-2/3** — multi-step yield strategies, more adapters, mainnet hardening.

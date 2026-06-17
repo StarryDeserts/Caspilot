@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Developers · Caspilot x402 API</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--canvas:#0A0A0B;--surface:#141417;--surface-2:#1C1C21;--hairline:#2A2A31;--text:#ECECEE;--text-muted:#9A9AA3;--accent:#FF5A1F;--accent-dim:#7A2E12;--validated:#3B82F6;--payment:#D97706;--inflight:#6366F1;--executed:#16A34A;--failed:#DC2626;--display:'Bricolage Grotesque',sans-serif;--body:'Hanken Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;--topbar-h:56px;--ease:cubic-bezier(0.16,1,0.3,1)}
+*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}html,body{height:100%}
+body{background:var(--canvas);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+a{color:inherit}
+
+/* TOP BAR */
+.topbar{position:sticky;top:0;z-index:30;height:var(--topbar-h);background:rgba(10,10,11,.86);backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--hairline);display:flex;align-items:center;justify-content:space-between;padding:0 24px}
+.topbar .wordmark{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.topbar .mark-dot{width:8px;height:8px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px rgba(255,90,31,.5)}
+.topbar .tb-right{display:flex;align-items:center;gap:14px}
+.topbar .tb-env{font-family:var(--mono);font-size:11px;color:var(--text-muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:var(--body);font-weight:500;font-size:14px;padding:8px 15px;border-radius:8px;border:1px solid transparent;cursor:pointer;white-space:nowrap;text-decoration:none;transition:background 160ms var(--ease),box-shadow 160ms var(--ease)}
+.btn-primary{background:var(--accent);color:#170b04;font-weight:600}
+.btn-primary:hover{background:#ff6d39}
+.btn-primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-primary svg{width:15px;height:15px;stroke:currentColor;fill:none}
+
+/* LAYOUT */
+.docs{display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px;max-width:1080px;margin:0 auto;padding:40px 24px 96px}
+.anchor-nav{position:sticky;top:calc(var(--topbar-h) + 32px);align-self:start;height:max-content}
+.anchor-nav .ann-title{font-family:var(--mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px}
+.anchor-nav a{display:block;font-size:13px;color:var(--text-muted);text-decoration:none;padding:6px 0 6px 12px;border-left:1px solid var(--hairline);transition:color 140ms var(--ease),border-color 140ms var(--ease)}
+.anchor-nav a:hover{color:var(--text)}
+.anchor-nav a.active{color:var(--text);border-left-color:var(--accent)}
+
+.content{min-width:0}
+.section{padding-top:24px;margin-bottom:56px;scroll-margin-top:calc(var(--topbar-h) + 24px)}
+.kicker{font-family:var(--mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.section h2{font-family:var(--display);font-weight:600;font-size:26px;letter-spacing:-.02em;margin-bottom:14px}
+.section p{color:var(--text-muted);max-width:64ch;margin-bottom:14px}
+.section p b{color:var(--text);font-weight:500}
+.section p code,.icode{font-family:var(--mono);font-size:.9em;background:var(--surface-2);border:1px solid var(--hairline);border-radius:5px;padding:1px 6px;color:var(--text)}
+.url-chip{display:inline-flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:9px;padding:9px 14px;font-family:var(--mono);font-size:13px;color:var(--text);margin-top:6px}
+.url-chip .uc-dot{width:6px;height:6px;border-radius:50%;background:var(--executed)}
+.url-chip .uc-env{color:var(--text-muted);font-size:11px}
+
+/* x402 FLOW */
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:8px}
+.fstep{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:18px;position:relative}
+.fstep .fnum{font-family:var(--mono);font-size:10px;color:var(--text-muted);margin-bottom:10px}
+.fstep .ftitle{font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:8px}
+.fstep .fdesc{font-size:12px;color:var(--text-muted);line-height:1.5}
+.fstep .farrow{position:absolute;right:-12px;top:50%;transform:translateY(-50%);width:24px;height:24px;display:grid;place-items:center;z-index:2}
+.fstep:last-child .farrow{display:none}
+.fstep .farrow svg{width:14px;height:14px;stroke:var(--hairline);fill:none}
+.sbadge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:999px;border:1px solid;margin-bottom:12px}
+.sbadge .sd{width:5px;height:5px;border-radius:50%}
+.sbadge.req{color:var(--text-muted);border-color:var(--hairline);background:var(--surface-2)}.sbadge.req .sd{background:var(--text-muted)}
+.sbadge.pay{color:var(--payment);border-color:rgba(217,119,6,.35);background:rgba(217,119,6,.08)}.sbadge.pay .sd{background:var(--payment)}
+.sbadge.proof{color:var(--validated);border-color:rgba(59,130,246,.35);background:rgba(59,130,246,.08)}.sbadge.proof .sd{background:var(--validated)}
+.sbadge.ok{color:var(--executed);border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.08)}.sbadge.ok .sd{background:var(--executed)}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media(max-width:880px){.docs{grid-template-columns:1fr;gap:24px}.anchor-nav{position:static;display:none}.flow{grid-template-columns:1fr 1fr}.fstep .farrow{display:none}}
+@media(max-width:560px){.flow{grid-template-columns:1fr}}
+.ep{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:28px;align-items:start;margin-bottom:28px}
+.ep:last-child{margin-bottom:0}
+.ep-left .ep-method{display:inline-flex;align-items:center;gap:8px;margin-bottom:10px}
+.verb{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em;padding:3px 8px;border-radius:5px;border:1px solid}
+.verb.post{color:var(--validated);border-color:rgba(59,130,246,.35);background:rgba(59,130,246,.08)}
+.verb.get{color:var(--executed);border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.08)}
+.ep-left .ep-path{font-family:var(--mono);font-size:13px;color:var(--text);word-break:break-all}
+.ep-left h3{font-family:var(--display);font-weight:600;font-size:17px;margin:14px 0 8px}
+.ep-left p{font-size:14px;color:var(--text-muted);max-width:46ch;margin-bottom:10px}
+.ep-left .note{font-family:var(--mono);font-size:11px;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--hairline);border-left:2px solid var(--accent-dim);border-radius:7px;padding:9px 11px;line-height:1.55}
+.code{position:relative;background:var(--surface-2);border:1px solid var(--hairline);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.code:last-child{margin-bottom:0}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--hairline)}
+.code-head .ch-label{font-family:var(--mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+.code-head .ch-right{display:flex;align-items:center;gap:10px}
+.code-head .ch-tag{font-family:var(--mono);font-size:9px;color:var(--text-muted);background:var(--surface);border:1px solid var(--hairline);border-radius:5px;padding:2px 6px}
+.copy{font-family:var(--mono);font-size:10px;color:var(--text-muted);background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;opacity:0;transition:opacity 140ms var(--ease),color 140ms var(--ease)}
+.code:hover .copy{opacity:1}
+.copy:hover{color:var(--text)}
+.copy.copied{color:var(--accent);opacity:1}
+.copy svg{width:11px;height:11px;stroke:currentColor;fill:none}
+.code pre{margin:0;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--text);white-space:pre}
+.code .status{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:5px;border:1px solid}
+.code .status.s2{color:var(--executed);border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.08)}
+.code .status.s4{color:var(--failed);border-color:rgba(220,38,38,.35);background:rgba(220,38,38,.08)}
+/* JSON tint — muted keys, slightly brighter strings; NO rainbow */
+.jk{color:var(--text-muted)}
+.js{color:#c9c9cf}
+.jn{color:var(--text)}
+.jb{color:var(--text)}
+.jp{color:var(--text-muted)}
+@media(max-width:880px){.ep{grid-template-columns:1fr;gap:14px}}
+.err-table{width:100%;border-collapse:collapse;margin-top:8px;border:1px solid var(--hairline);border-radius:10px;overflow:hidden}
+.err-table thead th{background:var(--surface-2);font-family:var(--mono);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);text-align:left;padding:11px 16px;border-bottom:1px solid var(--hairline);white-space:nowrap}
+.err-table tbody td{padding:13px 16px;border-bottom:1px solid var(--hairline);font-size:13px;vertical-align:top}
+.err-table tbody tr:last-child td{border-bottom:none}
+.err-table .ecode{font-family:var(--mono);font-size:12px;white-space:nowrap;font-weight:500}
+.err-table .ecode.e402{color:var(--payment)}
+.err-table .ecode.e422{color:var(--failed)}
+.err-table .ecode.e404{color:var(--text-muted)}
+.err-table .ecode.e503{color:var(--inflight)}
+.err-table .emeaning{color:var(--text)}
+.err-table .ereason{font-family:var(--mono);font-size:11px;color:var(--text-muted);line-height:1.55}
+.err-note{font-family:var(--mono);font-size:12px;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--hairline);border-left:2px solid var(--accent-dim);border-radius:7px;padding:11px 13px;margin-top:16px;line-height:1.6}
+.err-note b{color:var(--text);font-weight:500}
+
+.security{background:var(--surface);border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);margin:64px 0 0;padding:48px 0}
+.security-inner{max-width:1080px;margin:0 auto;padding:0 24px}
+.security .kicker{margin-bottom:14px}
+.security h2{font-family:var(--display);font-weight:600;font-size:24px;letter-spacing:-.015em;margin-bottom:24px}
+.guarantees{display:grid;grid-template-columns:1fr 1fr;gap:0 40px}
+.grow{display:flex;align-items:flex-start;gap:14px;padding:16px 0;border-bottom:1px solid var(--hairline)}
+.grow svg{width:16px;height:16px;stroke:var(--executed);fill:none;flex-shrink:0;margin-top:2px}
+.grow .gt{font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:2px}
+.grow .gs{font-size:12px;color:var(--text-muted);line-height:1.5}
+.doc-footer{max-width:1080px;margin:0 auto;padding:28px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.doc-footer .fbrand{font-family:var(--display);font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.doc-footer .fbrand .md{width:8px;height:8px;border-radius:2px;background:var(--accent)}
+.doc-footer .fmeta{font-family:var(--mono);font-size:11px;color:var(--text-muted)}
+@media(max-width:680px){.guarantees{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wordmark"><span class="mark-dot"></span>Caspilot</div>
+  <div class="tb-right">
+    <span class="tb-env">casper:casper-test</span>
+    <a class="btn btn-primary" href="#">Launch console<svg viewBox="0 0 24 24" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  </div>
+</header>
+
+<div class="docs">
+  <!-- ANCHOR NAV -->
+  <nav class="anchor-nav" id="anchorNav">
+    <div class="ann-title">x402 API</div>
+    <a href="#overview" class="active">Overview</a>
+    <a href="#auth">Authentication</a>
+    <a href="#flow">The x402 flow</a>
+    <a href="#create">Create intent</a>
+    <a href="#validate">Validate policy</a>
+    <a href="#trace">Get trace</a>
+    <a href="#errors">Errors</a>
+  </nav>
+
+  <div class="content">
+
+    <!-- 1. OVERVIEW -->
+    <section class="section" id="overview">
+      <div class="kicker">OVERVIEW</div>
+      <h2>A policy-gated intent API</h2>
+      <p>Caspilot exposes a policy-gated intent API. Agents pay per call with <b>x402</b> (CEP-18 + EIP-712 over casper-test). The agent never holds Caspilot's keys; Caspilot never broadcasts on the agent's behalf without policy approval.</p>
+      <p>Every call moves an intent through an explicit finite-state machine. Nothing executes on-chain until a policy authorizes it, and every transition is recorded in a redacted trace.</p>
+      <div class="url-chip"><span class="uc-dot"></span>https://api.caspilot.dev/v1<span class="uc-env">· casper-test</span></div>
+    </section>
+
+    <!-- 2. AUTHENTICATION -->
+    <section class="section" id="auth">
+      <div class="kicker">AUTHENTICATION</div>
+      <h2>Pay-per-call, not API keys</h2>
+      <p>There are no bearer tokens. Authorization is economic: each call is gated by an <b>x402</b> payment settled in CEP-18, with an EIP-712 receipt proving the transfer. The first request returns <code>402 Payment Required</code> with a quote; you pay, then retry with proof.</p>
+      <p>Because authorization is a payment receipt rather than a stored secret, <b>there is no key to leak</b> — and Caspilot's signer is a separate service the API can never reach.</p>
+    </section>
+
+    <!-- 3. THE x402 FLOW -->
+    <section class="section" id="flow">
+      <div class="kicker">THE x402 FLOW</div>
+      <h2>Request → pay → retry → execute</h2>
+      <p>Four steps, fully on the record. State colors below appear only in the small step badges.</p>
+      <div class="flow">
+        <div class="fstep">
+          <span class="sbadge req"><span class="sd"></span>REQUEST</span>
+          <div class="fnum">01</div>
+          <div class="ftitle">Call the endpoint</div>
+          <div class="fdesc">Send the intent request with no payment yet.</div>
+          <div class="farrow"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="fstep">
+          <span class="sbadge pay"><span class="sd"></span>402 QUOTE</span>
+          <div class="fnum">02</div>
+          <div class="ftitle">402 Payment Required</div>
+          <div class="fdesc">Server returns a quote: amount, CEP-18 token, receiver.</div>
+          <div class="farrow"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="fstep">
+          <span class="sbadge proof"><span class="sd"></span>PAY · RECEIPT</span>
+          <div class="fnum">03</div>
+          <div class="ftitle">Pay + EIP-712 receipt</div>
+          <div class="fdesc">CEP-18 transfer on casper-test, signed EIP-712 receipt as proof.</div>
+          <div class="farrow"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="fstep">
+          <span class="sbadge ok"><span class="sd"></span>200 OK</span>
+          <div class="fnum">04</div>
+          <div class="ftitle">Retry with proof</div>
+          <div class="fdesc">Re-send with the receipt; the call succeeds and the intent advances.</div>
+        </div>
+      </div>
+    </section>
+        <!-- 3a. CREATE INTENT -->
+    <section class="section" id="create">
+      <div class="kicker">ENDPOINTS</div>
+      <h2>Create intent</h2>
+      <div class="ep">
+        <div class="ep-left">
+          <div class="ep-method"><span class="verb post">POST</span></div>
+          <div class="ep-path">/intents</div>
+          <h3>Draft a payment intent</h3>
+          <p>Creates an intent in <code>DRAFT</code>. Nothing executes — it is a proposal on the record, scoped to a vault and network.</p>
+        </div>
+        <div class="ep-right">
+          <div class="code">
+            <div class="code-head">
+              <span class="ch-label">Request</span>
+              <div class="ch-right"><span class="ch-tag">casper-test</span><button class="copy" onclick="copyCode(this)"><svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>copy</button></div>
+            </div>
+            <pre><span class="jp">POST /intents</span>
+{
+  <span class="jk">"agent"</span>: <span class="js">"00aa…"</span>,
+  <span class="jk">"receiver"</span>: <span class="js">"00bb…"</span>,
+  <span class="jk">"token"</span>: <span class="js">"cspr-test-cep18"</span>,
+  <span class="jk">"contract"</span>: <span class="js">"00cc…"</span>,
+  <span class="jk">"network"</span>: <span class="js">"casper:casper-test"</span>,
+  <span class="jk">"amount"</span>: <span class="js">"500"</span>
+}</pre>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="ch-label"><span class="status s2">201 Created</span></span>
+              <div class="ch-right"><button class="copy" onclick="copyCode(this)"><svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>copy</button></div>
+            </div>
+            <pre>{
+  <span class="jk">"id"</span>: <span class="js">"int_3hdp2en…"</span>,
+  <span class="jk">"state"</span>: <span class="js">"DRAFT"</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3b. VALIDATE POLICY -->
+    <section class="section" id="validate">
+      <div class="kicker">ENDPOINTS</div>
+      <h2>Validate policy</h2>
+      <div class="ep">
+        <div class="ep-left">
+          <div class="ep-method"><span class="verb post">POST</span></div>
+          <div class="ep-path">/intents/:id/validate-policy</div>
+          <h3>Run the SignerGuard checks</h3>
+          <p>Checks caps and allowlist. On success the intent advances to <code>POLICY_VALIDATED</code> with a <code>policyDigest</code>. On denial it returns <code>422</code> with a human-readable reason.</p>
+          <div class="note">Denials are explicit. The body always carries a <b>reason</b>, never a bare status code.</div>
+        </div>
+        <div class="ep-right">
+          <div class="code">
+            <div class="code-head">
+              <span class="ch-label"><span class="status s2">200 OK</span></span>
+              <div class="ch-right"><span class="ch-tag">casper-test</span><button class="copy" onclick="copyCode(this)"><svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>copy</button></div>
+            </div>
+            <pre>{
+  <span class="jk">"id"</span>: <span class="js">"int_3hdp2en…"</span>,
+  <span class="jk">"state"</span>: <span class="js">"POLICY_VALIDATED"</span>,
+  <span class="jk">"policyDigest"</span>: <span class="js">"bfc091a0…"</span>
+}</pre>
+          </div>
+          <div class="code">
+            <div class="code-head">
+              <span class="ch-label"><span class="status s4">422 Policy denied</span></span>
+              <div class="ch-right"><button class="copy" onclick="copyCode(this)"><svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>copy</button></div>
+            </div>
+            <pre>{
+  <span class="jk">"error"</span>: <span class="js">"policy_denied"</span>,
+  <span class="jk">"reason"</span>: <span class="js">"amount exceeds vault daily cap (1000 &lt; 1500)"</span>,
+  <span class="jk">"state"</span>: <span class="js">"DRAFT"</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3c. GET TRACE -->
+    <section class="section" id="trace">
+      <div class="kicker">ENDPOINTS</div>
+      <h2>Get trace</h2>
+      <div class="ep">
+        <div class="ep-left">
+          <div class="ep-method"><span class="verb get">GET</span></div>
+          <div class="ep-path">/intents/:id/trace</div>
+          <h3>Read the audit trail</h3>
+          <p>Returns the ordered transitions for an intent — what happened and when.</p>
+          <div class="note">Payloads are <b>redacted</b>. Agent reasoning never appears in the trace — by design.</div>
+        </div>
+        <div class="ep-right">
+          <div class="code">
+            <div class="code-head">
+              <span class="ch-label"><span class="status s2">200 OK</span></span>
+              <div class="ch-right"><span class="ch-tag">casper-test</span><button class="copy" onclick="copyCode(this)"><svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>copy</button></div>
+            </div>
+            <pre>{
+  <span class="jk">"id"</span>: <span class="js">"int_3hdp2en…"</span>,
+  <span class="jk">"entries"</span>: [
+    {
+      <span class="jk">"atMs"</span>: <span class="jn">1739526062000</span>,
+      <span class="jk">"state"</span>: <span class="js">"DRAFT"</span>,
+      <span class="jk">"kind"</span>: <span class="js">"created"</span>,
+      <span class="jk">"payload"</span>: { <span class="jk">"body"</span>: { <span class="jk">"token"</span>: <span class="js">"cspr-test-cep18"</span>, <span class="jk">"amount"</span>: <span class="js">"500"</span> } }
+    },
+    {
+      <span class="jk">"atMs"</span>: <span class="jn">1739526067000</span>,
+      <span class="jk">"state"</span>: <span class="js">"POLICY_VALIDATED"</span>,
+      <span class="jk">"kind"</span>: <span class="js">"policy_check"</span>,
+      <span class="jk">"payload"</span>: { <span class="jk">"allowed"</span>: <span class="jb">true</span>, <span class="jk">"policyDigest"</span>: <span class="js">"bfc091a0…"</span> }
+    }
+  ]
+}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3d. REJECT -->
+    <section class="section" id="reject">
+      <div class="kicker">ENDPOINTS</div>
+      <h2>Reject intent</h2>
+      <div class="ep">
+        <div class="ep-left">
+          <div class="ep-method"><span class="verb post">POST</span></div>
+          <div class="ep-path">/intents/:id/reject</div>
+          <h3>Terminate an intent</h3>
+          <p>Moves the intent to the terminal <code>REJECTED</code> state. Polling stops; the off-ramp is recorded on the trace.</p>
+        </div>
+        <div class="ep-right">
+          <div class="code">
+            <div class="code-head">
+              <span class="ch-label"><span class="status s2">200 OK</span></span>
+              <div class="ch-right"><span class="ch-tag">casper-test</span><button class="copy" onclick="copyCode(this)"><svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>copy</button></div>
+            </div>
+            <pre>{
+  <span class="jk">"id"</span>: <span class="js">"int_3hdp2en…"</span>,
+  <span class="jk">"state"</span>: <span class="js">"REJECTED"</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+        <!-- 4. ERRORS -->
+    <section class="section" id="errors">
+      <div class="kicker">ERRORS</div>
+      <h2>Errors carry a reason</h2>
+      <p>Every error body is human-readable. You get a status <i>and</i> a reason you can surface directly to a user or log — never a bare code.</p>
+      <table class="err-table">
+        <thead>
+          <tr><th>Status</th><th>Meaning</th><th>Example reason</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="ecode e402">402</td>
+            <td class="emeaning">Payment Required</td>
+            <td class="ereason">"quote: 500 cspr-test-cep18 to 00bb… — pay and retry with receipt"</td>
+          </tr>
+          <tr>
+            <td class="ecode e422">422</td>
+            <td class="emeaning">Policy denied</td>
+            <td class="ereason">"amount exceeds vault daily cap (1000 &lt; 1500)"</td>
+          </tr>
+          <tr>
+            <td class="ecode e404">404</td>
+            <td class="emeaning">Unknown intent</td>
+            <td class="ereason">"no intent with id int_3hdp2en… — it may have been pruned"</td>
+          </tr>
+          <tr>
+            <td class="ecode e503">503</td>
+            <td class="emeaning">Upstream unavailable</td>
+            <td class="ereason">"getTrace 503 · node upstream unavailable, retry shortly"</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="err-note">All errors share the shape <b>{ "error", "reason", "state"? }</b>. The <b>reason</b> is safe to display — it never contains keys, payloads, or agent reasoning.</div>
+    </section>
+
+  </div><!-- /.content -->
+</div><!-- /.docs -->
+
+<!-- 5. SECURITY NOTE -->
+<section class="security">
+  <div class="security-inner">
+    <div class="kicker">SECURITY NOTE</div>
+    <h2>What holds, structurally</h2>
+    <div class="guarantees">
+      <div class="grow">
+        <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/></svg>
+        <div><div class="gt">Signer separation</div><div class="gs">The API never broadcasts. Signing is a separate service it cannot reach.</div></div>
+      </div>
+      <div class="grow">
+        <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7z"/><path d="M4 4l16 16"/></svg>
+        <div><div class="gt">Redacted trace</div><div class="gs">Transitions are recorded; reasoning never leaves the agent.</div></div>
+      </div>
+      <div class="grow">
+        <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+        <div><div class="gt">Replay-protected payment ledger</div><div class="gs">Reserve → commit. A receipt can be settled exactly once.</div></div>
+      </div>
+      <div class="grow">
+        <svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+        <div><div class="gt">No secrets in client bundles</div><div class="gs">Bundle-checked — no keys or cloud credentials ship to the client.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="doc-footer">
+    <div class="fbrand"><span class="md"></span>Caspilot</div>
+    <div class="fmeta">casper:casper-test · API v1 · testnet only</div>
+  </div>
+</footer>
+
+<script>
+const reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+// copy code blocks
+function copyCode(btn){
+  const pre=btn.closest('.code').querySelector('pre');
+  const text=pre.innerText;
+  navigator.clipboard&&navigator.clipboard.writeText(text);
+  const o=btn.innerHTML;btn.classList.add('copied');
+  btn.innerHTML='<svg viewBox="0 0 24 24" stroke-width="2"><path d="M5 12l5 5 9-11"/></svg>copied';
+  setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML=o;},1400);
+}
+
+// anchor-nav scroll-spy
+const navLinks=[...document.querySelectorAll('.anchor-nav a')];
+const idToLink={};navLinks.forEach(a=>idToLink[a.getAttribute('href').slice(1)]=a);
+const sections=[...document.querySelectorAll('.content .section')];
+if('IntersectionObserver' in window){
+  const spy=new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        navLinks.forEach(a=>a.classList.remove('active'));
+        const id=e.target.id;
+        // group the duplicate-kicker endpoint sections under their own anchors
+        if(idToLink[id])idToLink[id].classList.add('active');
+      }
+    });
+  },{rootMargin:'-20% 0px -70% 0px',threshold:0});
+  sections.forEach(s=>spy.observe(s));
+}
+</script>
+</body>
+</html>

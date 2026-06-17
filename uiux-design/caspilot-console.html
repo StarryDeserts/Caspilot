@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Console · Caspilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--canvas:#0A0A0B;--surface:#141417;--surface-2:#1C1C21;--hairline:#2A2A31;--text:#ECECEE;--text-muted:#9A9AA3;--accent:#FF5A1F;--accent-dim:#7A2E12;--validated:#3B82F6;--payment:#D97706;--inflight:#6366F1;--executed:#16A34A;--failed:#DC2626;--display:'Bricolage Grotesque',sans-serif;--body:'Hanken Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;--sidebar-w:240px;--topbar-h:56px;--ease:cubic-bezier(0.16,1,0.3,1)}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}
+body{background:var(--canvas);color:var(--text);font-family:var(--body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:var(--sidebar-w) 1fr;grid-template-rows:var(--topbar-h) 1fr;grid-template-areas:"sidebar topbar" "sidebar content";height:100vh}
+.sidebar{grid-area:sidebar;background:var(--surface);border-right:1px solid var(--hairline);display:flex;flex-direction:column;padding:20px 0 16px}
+.brand{padding:4px 20px 24px;border-bottom:1px solid var(--hairline);margin-bottom:12px}
+.brand .wordmark{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.brand .mark-dot{width:9px;height:9px;border-radius:2px;background:var(--accent);box-shadow:0 0 10px rgba(255,90,31,.5)}
+.brand .tagline{font-family:var(--mono);font-size:12px;color:var(--text-muted);margin-top:6px}
+.nav{display:flex;flex-direction:column;gap:2px;padding:0 8px;flex:1}
+.nav-item{position:relative;display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;color:var(--text-muted);text-decoration:none;font-weight:500;cursor:pointer;transition:background 180ms var(--ease),color 180ms var(--ease)}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;stroke:currentColor}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item.active{color:var(--text);background:var(--surface-2)}
+.nav-item.active::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);width:3px;height:20px;border-radius:0 2px 2px 0;background:var(--accent);box-shadow:0 0 8px rgba(255,90,31,.6)}
+.sidebar-footer{padding:12px 16px 0;border-top:1px solid var(--hairline);margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.env-label{font-family:var(--mono);font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.env-label .net-dot{width:6px;height:6px;border-radius:50%;background:var(--executed)}
+.build-chip{font-family:var(--mono);font-size:11px;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--hairline);border-radius:6px;padding:3px 8px;align-self:flex-start}
+.topbar{grid-area:topbar;background:var(--canvas);border-bottom:1px solid var(--hairline);display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:0 24px}
+.tooltip-wrap{position:relative}
+.tooltip-wrap .tip{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface-2);border:1px solid var(--hairline);color:var(--text);font-family:var(--mono);font-size:11px;padding:5px 9px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transform:translateY(-3px);transition:opacity 160ms var(--ease),transform 160ms var(--ease);z-index:20;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.tooltip-wrap:hover .tip{opacity:1;transform:translateY(0)}
+.network-pill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:6px 12px;font-family:var(--mono);font-size:12px;cursor:default}
+.network-pill .pill-dot{width:6px;height:6px;border-radius:50%;background:var(--validated)}
+.health-dot{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;cursor:default}
+.health-dot:hover{background:var(--surface)}
+.health-dot .dot{width:9px;height:9px;border-radius:50%;position:relative;background:var(--executed);color:var(--executed)}
+.health-dot .dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;background:currentColor;opacity:.18;animation:pulse 2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.8);opacity:.25}70%{transform:scale(1.6);opacity:0}100%{opacity:0}}
+.wallet-btn{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;font-weight:500;padding:7px 14px;border-radius:8px;cursor:pointer;background:var(--surface);border:1px solid var(--hairline);color:var(--text);transition:background 180ms var(--ease)}
+.wallet-btn:hover{background:var(--surface-2)}
+.wallet-btn .key-dot{width:6px;height:6px;border-radius:50%;background:var(--executed)}
+.wallet-btn .caret{width:12px;height:12px;stroke:currentColor}
+.content{grid-area:content;overflow-y:auto;padding:28px 24px 64px}
+.rail{max-width:1200px;margin:0 auto}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:24px}
+.page-title{font-family:var(--display);font-weight:700;font-size:28px;letter-spacing:-.02em}
+.page-purpose{color:var(--text-muted);font-size:14px;margin-top:4px}
+.head-actions{display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--body);font-weight:500;font-size:14px;padding:9px 16px;border-radius:8px;border:1px solid transparent;cursor:pointer;white-space:nowrap;transition:background 160ms var(--ease),box-shadow 160ms var(--ease),opacity 160ms var(--ease)}
+.btn-primary{background:var(--accent);color:#170b04;font-weight:600}
+.btn-primary:hover{background:#ff6d39}
+.btn-primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-primary:active{background:var(--accent-dim)}
+.btn-primary:disabled{background:var(--surface-2);color:var(--text-muted);cursor:not-allowed;border-color:var(--hairline)}
+.btn-secondary{background:var(--surface-2);color:var(--text);border:1px solid var(--hairline)}
+.btn-secondary:hover{background:var(--hairline)}
+.btn-secondary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn .plus{width:15px;height:15px;stroke:currentColor;fill:none}
+.spinner{width:14px;height:14px;border:2px solid rgba(23,11,4,.3);border-top-color:#170b04;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:20px}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;grid-column:span 12}
+.stat{position:relative;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.02)}
+.stat .slabel{font-family:var(--mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
+.stat .snum{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:28px;font-weight:500;color:var(--text);line-height:1}
+.stat .ssub{font-family:var(--mono);font-size:11px;color:var(--text-muted);margin-top:6px}
+.cap-bar{height:4px;background:var(--surface-2);border-radius:2px;margin-top:12px;overflow:hidden}
+.cap-fill{height:100%;width:0;background:var(--accent);border-radius:2px;transition:width 900ms var(--ease)}
+.sk{display:inline-block;height:12px;border-radius:4px;background:linear-gradient(90deg,var(--surface-2) 25%,var(--hairline) 50%,var(--surface-2) 75%);background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.cap-fill{transition:none!important}}
+@media(max-width:900px){.strip{grid-template-columns:repeat(2,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.02)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--hairline)}
+.panel-head h3{font-family:var(--display);font-weight:600;font-size:16px}
+.view-all{font-family:var(--mono);font-size:12px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.view-all:hover{text-decoration:underline}
+.view-all svg{width:12px;height:12px;stroke:currentColor;fill:none}
+.col-8{grid-column:span 8}
+.col-4{grid-column:span 4}
+table{width:100%;border-collapse:collapse}
+thead th{background:var(--surface-2);font-family:var(--mono);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);text-align:left;padding:10px 16px;border-bottom:1px solid var(--hairline);white-space:nowrap}
+thead th.num{text-align:right}
+tbody tr{cursor:pointer;transition:background 140ms var(--ease)}
+tbody tr:hover{background:var(--surface-2)}
+tbody td{padding:12px 16px;border-bottom:1px solid var(--hairline);font-size:13px;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+td.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12px}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.muted{color:var(--text-muted)}
+td.id a{color:var(--text);text-decoration:none}
+.badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;border-radius:999px;border:1px solid;white-space:nowrap}
+.badge .bdot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.draft{color:var(--text-muted);border-color:var(--hairline);background:var(--surface-2)}
+.badge.validated{color:var(--validated);border-color:rgba(59,130,246,.35);background:rgba(59,130,246,.08)}
+.badge.payment{color:var(--payment);border-color:rgba(217,119,6,.35);background:rgba(217,119,6,.08)}
+.badge.executed{color:var(--executed);border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.08)}
+.badge.failed{color:var(--failed);border-color:rgba(220,38,38,.35);background:rgba(220,38,38,.08)}
+.new-row{animation:fadeInTop 280ms var(--ease)}
+@keyframes fadeInTop{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.empty{padding:48px 24px;text-align:center}
+.empty .eicon{width:42px;height:42px;margin:0 auto 14px;display:grid;place-items:center;border-radius:10px;background:var(--surface-2);border:1px solid var(--hairline)}
+.empty .eicon svg{width:20px;height:20px;stroke:var(--text-muted);fill:none}
+.empty .etitle{font-family:var(--display);font-weight:600;font-size:15px;margin-bottom:6px}
+.empty .emsg{color:var(--text-muted);font-size:13px;margin-bottom:16px}
+.variant-label{font-family:var(--mono);font-size:11px;color:var(--text-muted);margin:28px 0 10px;grid-column:span 12}
+@media(max-width:900px){.col-8,.col-4{grid-column:span 12}}
+.vault-card{border:1px solid var(--hairline);border-radius:10px;padding:16px;margin-bottom:14px}
+.vault-card:last-child{margin-bottom:0}
+.vault-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.vault-head .vt{font-family:var(--mono);font-size:12px;color:var(--text)}
+.vault-head .vexp{font-family:var(--mono);font-size:10px;color:var(--text-muted)}
+.vault-kv{display:grid;grid-template-columns:auto 1fr;gap:7px 12px;margin-bottom:14px}
+.vault-kv dt{font-family:var(--mono);font-size:11px;color:var(--text-muted)}
+.vault-kv dd{font-family:var(--mono);font-size:11px;color:var(--text);text-align:right;font-variant-numeric:tabular-nums}
+.meter-row{display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:11px;margin-bottom:6px}
+.meter-row .mk{color:var(--text-muted)}
+.meter-row .mv{color:var(--text);font-variant-numeric:tabular-nums}
+.meter{height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.meter-fill{height:100%;border-radius:3px;background:var(--executed);width:0;transition:width 900ms var(--ease)}
+.foot-strip{grid-column:span 12;display:flex;flex-wrap:wrap;gap:10px 28px;align-items:center;border:1px solid var(--hairline);border-radius:12px;padding:16px 20px;margin-top:4px}
+.foot-strip .gtitle{font-family:var(--mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-right:8px}
+.guarantee{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;color:var(--text)}
+.guarantee svg{width:14px;height:14px;stroke:var(--executed);fill:none;flex-shrink:0}
+@media(prefers-reduced-motion:reduce){.meter-fill{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="wordmark"><span class="mark-dot"></span>Caspilot</div>
+      <div class="tagline">autonomy you can audit</div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item active" href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Intents</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M16 14h2"/></svg>Vaults</a>
+      <a class="nav-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M8 9l-4 3 4 3M16 9l4 3-4 3M13 6l-2 12"/></svg>Developers</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="env-label"><span class="net-dot"></span>casper:casper-test</div>
+      <div class="build-chip">build 7f3c1a9</div>
+    </div>
+  </aside>
+  <header class="topbar">
+    <div class="tooltip-wrap"><div class="network-pill"><span class="pill-dot"></span>casper:casper-test</div><div class="tip">Testnet only</div></div>
+    <div class="tooltip-wrap"><div class="health-dot"><span class="dot"></span></div><div class="tip">API /healthz · last checked 2s ago</div></div>
+    <button class="wallet-btn"><span class="key-dot"></span>01a2…9f<svg class="caret" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+  </header>
+  <main class="content">
+    <div class="rail">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Console</h1>
+          <p class="page-purpose">Propose, authorize, and execute agent intents on casper-test.</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-secondary"><svg class="plus" viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New vault</button>
+          <button class="btn btn-primary" onclick="loadBtn(this,'Opening…')"><svg class="plus" viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New intent</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- STATUS STRIP -->
+        <div class="strip">
+          <div class="stat">
+            <div class="slabel">Active intents</div>
+            <div class="snum" data-roll="3">0</div>
+          </div>
+          <div class="stat">
+            <div class="slabel">Awaiting policy</div>
+            <div class="snum" data-roll="1">0</div>
+          </div>
+          <div class="stat">
+            <div class="slabel">Executed today</div>
+            <div class="snum" data-roll="2">0</div>
+          </div>
+          <div class="stat">
+            <div class="slabel">Daily cap used</div>
+            <div class="snum"><span data-roll="1200">0</span> <span class="ssub" style="display:inline">/ 100,000</span></div>
+            <div class="cap-bar"><div class="cap-fill" data-pct="1.2"></div></div>
+          </div>
+        </div>
+                <!-- RECENT INTENTS -->
+        <div class="col-8">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Recent intents</h3>
+              <a class="view-all" href="#">View all<svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            </div>
+            <table>
+              <thead>
+                <tr><th>Intent</th><th>Agent</th><th>Token</th><th class="num">Amount</th><th>State</th><th>Updated</th></tr>
+              </thead>
+              <tbody id="recentRows">
+                <tr onclick="go('int_3hdp2en')">
+                  <td class="mono id"><a href="#">int_3hdp…</a></td>
+                  <td class="mono muted">00aa…</td>
+                  <td class="mono">cspr-test-cep18</td>
+                  <td class="num">500</td>
+                  <td><span class="badge validated"><span class="bdot"></span>POLICY_VALIDATED</span></td>
+                  <td class="muted">12s ago</td>
+                </tr>
+                <tr onclick="go('int_9kfa01x')">
+                  <td class="mono id"><a href="#">int_9kfa…</a></td>
+                  <td class="mono muted">00aa…</td>
+                  <td class="mono">cspr-test-cep18</td>
+                  <td class="num">1,200</td>
+                  <td><span class="badge draft"><span class="bdot"></span>DRAFT</span></td>
+                  <td class="muted">1m ago</td>
+                </tr>
+                <tr onclick="go('int_7wqp4ee')">
+                  <td class="mono id"><a href="#">int_7wqp…</a></td>
+                  <td class="mono muted">00aa…</td>
+                  <td class="mono">cspr-test-cep18</td>
+                  <td class="num">10,000</td>
+                  <td><span class="badge executed"><span class="bdot"></span>EXECUTED</span></td>
+                  <td class="muted">8m ago</td>
+                </tr>
+                <tr onclick="go('int_5tbn8cd')">
+                  <td class="mono id"><a href="#">int_5tbn…</a></td>
+                  <td class="mono muted">00ff…</td>
+                  <td class="mono">cspr-test-cep18</td>
+                  <td class="num">1,500</td>
+                  <td><span class="badge failed"><span class="bdot"></span>REJECTED</span></td>
+                  <td class="muted">14m ago</td>
+                </tr>
+                <tr onclick="go('int_4hjn9ki')">
+                  <td class="mono id"><a href="#">int_4hjn…</a></td>
+                  <td class="mono muted">00ff…</td>
+                  <td class="mono">cspr-test-cep18</td>
+                  <td class="num">3,300</td>
+                  <td><span class="badge executed"><span class="bdot"></span>EXECUTED</span></td>
+                  <td class="muted">1h ago</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+                <!-- VAULTS SNAPSHOT -->
+        <div class="col-4">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>PolicyVaults</h3>
+              <a class="view-all" href="#">Manage vaults<svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+            </div>
+            <div style="padding:16px 20px">
+              <div class="vault-card">
+                <div class="vault-head"><span class="vt">vault · 00cc…</span><span class="vexp">valid until 2025-12-31</span></div>
+                <dl class="vault-kv">
+                  <dt>admin</dt><dd>00aa…</dd>
+                  <dt>token</dt><dd>cep18 · 00cc…</dd>
+                  <dt>max single</dt><dd>500</dd>
+                  <dt>daily cap</dt><dd>100,000</dd>
+                </dl>
+                <div class="meter-row"><span class="mk">used today</span><span class="mv">1,200 / 100,000</span></div>
+                <div class="meter"><div class="meter-fill" data-pct="1.2"></div></div>
+              </div>
+              <div class="vault-card">
+                <div class="vault-head"><span class="vt">vault · 00ef…</span><span class="vexp">valid until 2026-03-15</span></div>
+                <dl class="vault-kv">
+                  <dt>admin</dt><dd>00aa…</dd>
+                  <dt>token</dt><dd>cep18 · 00ef…</dd>
+                  <dt>max single</dt><dd>2,500</dd>
+                  <dt>daily cap</dt><dd>250,000</dd>
+                </dl>
+                <div class="meter-row"><span class="mk">used today</span><span class="mv">48,500 / 250,000</span></div>
+                <div class="meter"><div class="meter-fill" data-pct="19.4"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECURITY / PROVENANCE FOOTER -->
+        <div class="foot-strip">
+          <span class="gtitle">guarantees</span>
+          <span class="guarantee"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/></svg>signer separation</span>
+          <span class="guarantee"><svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7z"/><path d="M4 4l16 16"/></svg>redacted trace</span>
+          <span class="guarantee"><svg viewBox="0 0 24 24" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>no keys in browser</span>
+        </div>
+
+        <!-- reference variants -->
+        <div class="variant-label">// reference — recent intents empty state</div>
+        <div class="col-8">
+          <div class="panel">
+            <div class="panel-head"><h3>Recent intents</h3><a class="view-all" href="#">View all<svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+            <div class="empty">
+              <div class="eicon"><svg viewBox="0 0 24 24" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+              <div class="etitle">No intents yet</div>
+              <div class="emsg">Propose your first — the agent drafts it, the policy decides.</div>
+              <button class="btn btn-primary"><svg class="plus" viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New intent</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="variant-label">// reference — loading skeleton</div>
+        <div class="col-8">
+          <div class="panel">
+            <div class="panel-head"><h3>Recent intents</h3><a class="view-all" href="#">View all<svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+            <table>
+              <thead><tr><th>Intent</th><th>Agent</th><th>Token</th><th class="num">Amount</th><th>State</th><th>Updated</th></tr></thead>
+              <tbody>
+                <tr><td><span class="sk" style="width:80px"></span></td><td><span class="sk" style="width:42px"></span></td><td><span class="sk" style="width:100px"></span></td><td class="num"><span class="sk" style="width:40px"></span></td><td><span class="sk" style="width:96px"></span></td><td><span class="sk" style="width:50px"></span></td></tr>
+                <tr><td><span class="sk" style="width:80px"></span></td><td><span class="sk" style="width:42px"></span></td><td><span class="sk" style="width:100px"></span></td><td class="num"><span class="sk" style="width:40px"></span></td><td><span class="sk" style="width:96px"></span></td><td><span class="sk" style="width:50px"></span></td></tr>
+                <tr><td><span class="sk" style="width:80px"></span></td><td><span class="sk" style="width:42px"></span></td><td><span class="sk" style="width:100px"></span></td><td class="num"><span class="sk" style="width:40px"></span></td><td><span class="sk" style="width:96px"></span></td><td><span class="sk" style="width:50px"></span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /.grid -->
+    </div><!-- /.rail -->
+  </main>
+</div>
+
+<script>
+function go(id){console.log('navigate',id);}
+function loadBtn(btn,label){
+  if(btn.disabled)return;const o=btn.innerHTML;btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span>'+label;
+  setTimeout(()=>{btn.disabled=false;btn.innerHTML=o},1500);
+}
+const reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+// roll stat numbers on load
+function roll(el){
+  const target=parseInt(el.dataset.roll,10);
+  if(reduce){el.textContent=target.toLocaleString();return;}
+  const dur=700,t0=performance.now();
+  function tick(t){
+    const p=Math.min((t-t0)/dur,1),e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(target*e).toLocaleString();
+    if(p<1)requestAnimationFrame(tick);else el.textContent=target.toLocaleString();
+  }
+  requestAnimationFrame(tick);
+}
+window.addEventListener('load',()=>{
+  document.querySelectorAll('[data-roll]').forEach(roll);
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.cap-fill,.meter-fill').forEach(f=>{f.style.width=f.dataset.pct+'%';});
+  });
+});
+</script>
+</body>
+</html>
