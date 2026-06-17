@@ -61,4 +61,35 @@ describe('PlannerRedactor', () => {
     const out = r.redact({ buf: Buffer.from('secret') });
     expect(JSON.stringify(out)).not.toContain('secret');
   });
+
+  describe('redactWithReport (honest redaction signal)', () => {
+    it('reports redacted:false and identical value when nothing is forbidden', () => {
+      const input = { allowed: true, policyDigest: 'bfc091a0' };
+      const { value, redacted } = r.redactWithReport(input);
+      expect(redacted).toBe(false);
+      expect(value).toEqual({ allowed: true, policyDigest: 'bfc091a0' });
+    });
+
+    it('reports redacted:true and strips the key when a forbidden key is present', () => {
+      const { value, redacted } = r.redactWithReport({
+        allowed: true,
+        reasoning: 'hidden chain of thought',
+      });
+      expect(redacted).toBe(true);
+      expect(value).toEqual({ allowed: true });
+    });
+
+    it('detects a forbidden key nested deep inside an array of objects', () => {
+      const { value, redacted } = r.redactWithReport({
+        steps: [{ name: 'plan', env: { PRIVATE_KEY: 'x' } }],
+      });
+      expect(redacted).toBe(true);
+      expect(JSON.stringify(value)).not.toContain('PRIVATE_KEY');
+    });
+
+    it('produces the same value as redact() for a clean payload', () => {
+      const input = { body: { token: 'cspr-test-cep18', amount: '500' } };
+      expect(r.redactWithReport(input).value).toEqual(r.redact(input));
+    });
+  });
 });

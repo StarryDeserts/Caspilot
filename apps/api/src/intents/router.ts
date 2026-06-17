@@ -40,7 +40,12 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
   const signerPkPlaceholder = `01${'00'.repeat(32)}`;
   const state: Map<
     string,
-    { state: IntentState; body: z.infer<typeof CreateBody>; createdAtMs: number }
+    {
+      state: IntentState;
+      body: z.infer<typeof CreateBody>;
+      createdAtMs: number;
+      updatedAtMs: number;
+    }
   > = new Map();
 
   r.post('/', async (c) => {
@@ -54,7 +59,7 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     if (!body.success) return c.json({ error: 'invalid_body', issues: body.error.format() }, 400);
     const id = mintIntentId();
     const t = now();
-    state.set(id, { state: 'DRAFT', body: body.data, createdAtMs: t });
+    state.set(id, { state: 'DRAFT', body: body.data, createdAtMs: t, updatedAtMs: t });
     deps.audit.append({
       intentId: id,
       state: 'DRAFT',
@@ -63,6 +68,23 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
       payload: { body: body.data },
     });
     return c.json({ id, state: 'DRAFT' }, 201);
+  });
+
+  r.get('/', (c) => {
+    const intents = [...state.entries()]
+      .map(([id, e]) => ({
+        id,
+        state: e.state,
+        agent: e.body.agent,
+        receiver: e.body.receiver,
+        token: e.body.token,
+        contract: e.body.contract,
+        network: e.body.network,
+        amount: e.body.amount,
+        updatedAtMs: e.updatedAtMs,
+      }))
+      .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+    return c.json({ intents });
   });
 
   r.post('/:id/validate-policy', async (c) => {
@@ -90,6 +112,7 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     const denial = checkPolicyRules(signReq);
     if (denial) {
       entry.state = 'REJECTED';
+      entry.updatedAtMs = t;
       deps.audit.append({
         intentId: id,
         state: 'REJECTED',
@@ -114,6 +137,7 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     const reserved = await deps.spendLedger.reserve(reservation, deps.policy.perDayCapAtomic);
     if (!reserved.ok) {
       entry.state = 'REJECTED';
+      entry.updatedAtMs = t;
       deps.audit.append({
         intentId: id,
         state: 'REJECTED',
@@ -125,6 +149,7 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     }
     const policyDigest = computePolicyDigest(deps.policy);
     entry.state = 'POLICY_VALIDATED';
+    entry.updatedAtMs = t;
     deps.audit.append({
       intentId: id,
       state: 'POLICY_VALIDATED',
@@ -164,6 +189,7 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
       await deps.spendLedger.commit(reservation.id);
     }
     entry.state = 'EXECUTED';
+    entry.updatedAtMs = t;
     deps.audit.append({
       intentId: id,
       state: 'EXECUTED',
@@ -177,12 +203,19 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
   r.get('/:id/trace', (c) => {
     const id = c.req.param('id');
     if (!state.has(id)) return c.json({ error: 'not_found' }, 404);
-    const entries = deps.audit.listByIntent(id).map((row) => ({
-      atMs: row.at_ms,
-      state: row.state,
-      kind: row.kind,
-      payload: redactor.redact(JSON.parse(row.payload_json) as Record<string, unknown>),
-    }));
+    const entries = deps.audit.listByIntent(id).map((row) => {
+      // redactWithReport so the row can honestly say WHETHER reasoning/secrets
+      // were stripped. The client only ever sees the post-redaction payload, so
+      // this flag is the only truthful source for a "redacted" chip.
+      const report = redactor.redactWithReport(JSON.parse(row.payload_json) as Record<string, unknown>);
+      return {
+        atMs: row.at_ms,
+        state: row.state,
+        kind: row.kind,
+        payload: report.value,
+        redacted: report.redacted,
+      };
+    });
     return c.json({ id, entries });
   });
 
@@ -205,6 +238,7 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
       await deps.spendLedger.release(reservation.id);
     }
     entry.state = 'REJECTED';
+    entry.updatedAtMs = t;
     deps.audit.append({
       intentId: id,
       state: 'REJECTED',
