@@ -92,7 +92,11 @@ export class CaspilotApi {
   constructor(opts: CaspilotApiOptions) {
     if (!opts.baseUrl) throw new Error('baseUrl is required');
     this.baseUrl = opts.baseUrl.replace(/\/+$/, '');
-    this.fetcher = opts.fetch ?? globalThis.fetch;
+    // Bind the default global fetch to its global receiver. Stored on `this` and
+    // called as `this.fetcher(...)`, an unbound `globalThis.fetch` would run with
+    // `this === the CaspilotApi instance`; browsers enforce `window` as the
+    // receiver and throw "Illegal invocation". An injected fetch is used as-is.
+    this.fetcher = opts.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
   async createIntent(body: CreateIntentBody): Promise<CreateIntentResponse> {

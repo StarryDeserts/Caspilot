@@ -182,4 +182,30 @@ describe('CaspilotApi', () => {
     });
     await expect(api.getVault('vault_missing')).rejects.toThrow(/getVault 404/);
   });
+
+  // Regression: a real browser requires window.fetch to be invoked with
+  // this === window and throws "Illegal invocation" otherwise. Node/undici's
+  // fetch does NOT enforce the receiver, so every other test here (which injects
+  // opts.fetch) is blind to an unbound global fetch — the DEFAULT path that every
+  // page.tsx actually uses. This guard models the browser's receiver check on that
+  // default path; it caught a live "/vaults" + "/intents" crash that jsdom + SSR
+  // could not. See caspilot-web-browser-smoke.
+  it('invokes the default global fetch with the correct receiver (no Illegal invocation)', async () => {
+    const realGlobal = globalThis;
+    const orig = globalThis.fetch;
+    const guarded = function (this: unknown, _url: string) {
+      if (this !== realGlobal) {
+        throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+      }
+      return Promise.resolve(new Response(JSON.stringify({ vaults: [] }), { status: 200 }));
+    };
+    (globalThis as unknown as { fetch: unknown }).fetch = guarded;
+    try {
+      // No injected fetch → exercises the `opts.fetch ?? globalThis.fetch` branch.
+      const api = new CaspilotApi({ baseUrl: 'http://api.test' });
+      await expect(api.listVaults()).resolves.toEqual([]);
+    } finally {
+      (globalThis as unknown as { fetch: unknown }).fetch = orig;
+    }
+  });
 });
