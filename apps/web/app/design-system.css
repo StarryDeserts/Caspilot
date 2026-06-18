@@ -1341,6 +1341,13 @@ thead th {
 thead th.num {
   text-align: right;
 }
+/* When a status corner floats in the table's top-right (intents list/detail),
+   drop the header labels below it so they clear the corner instead of colliding
+   with the State/Updated cells. Scoped by the sibling combinator: corner-less
+   tables (e.g. the developers err-table) keep the default header padding. */
+.corner ~ table thead th {
+  padding-top: 30px;
+}
 tbody tr {
   cursor: pointer;
   transition: background 0.12s var(--ease);
