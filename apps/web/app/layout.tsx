@@ -1,4 +1,3 @@
-import './globals.css';
 import './design-system.css';
 import type { ReactNode } from 'react';
 import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
