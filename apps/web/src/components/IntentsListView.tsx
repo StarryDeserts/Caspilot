@@ -66,6 +66,10 @@ export function IntentsListView({
     () => (intents ?? []).filter((i) => matchesFilter(i.state, filter) && matchesSearch(i, query)),
     [intents, filter, query],
   );
+  // Loaded-and-empty raises the EmptyState hero CTA (filled amber). To keep one
+  // amber focus per viewport, the persistent header action steps down to ghost
+  // so the eye lands on the hero, not two competing buttons.
+  const isEmpty = intents !== null && intents.length === 0;
 
   async function create(body: CreateIntentBody) {
     setCreating(true);
@@ -93,7 +97,10 @@ export function IntentsListView({
             Every payment intent your agent proposed, and where the policy took it.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setDrawerOpen(true)}>
+        <button
+          className={`btn ${isEmpty ? 'btn-ghost' : 'btn-primary'}`}
+          onClick={() => setDrawerOpen(true)}
+        >
           <PlusIcon />
           New intent
         </button>

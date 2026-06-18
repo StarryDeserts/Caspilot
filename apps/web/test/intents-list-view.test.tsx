@@ -95,6 +95,27 @@ describe('IntentsListView (client render path)', () => {
     expect(screen.getAllByRole('button', { name: /new intent/i }).length).toBeGreaterThan(0);
   });
 
+  // Single-amber invariant: the empty state already funnels the eye to its hero
+  // CTA, so the persistent header action must de-emphasize (ghost) — otherwise
+  // two filled-amber New-intent buttons compete in one viewport.
+  it('keeps one amber CTA in the empty state: the hero is primary, the header is ghost', async () => {
+    const api = fakeApi({ listIntents: vi.fn(async () => []) });
+    const { container } = render(<IntentsListView api={api} onOpen={vi.fn()} now={NOW} />);
+    await screen.findByText(/no intents yet/i);
+    const headBtn = container.querySelector('.page-head .btn');
+    expect(headBtn?.className).toContain('btn-ghost');
+    expect(headBtn?.className).not.toContain('btn-primary');
+    const heroBtn = container.querySelector('.empty .btn');
+    expect(heroBtn?.className).toContain('btn-primary');
+  });
+
+  it('keeps the header New-intent button primary once intents exist (no competing hero)', async () => {
+    const { container } = await renderLoaded();
+    const headBtn = container.querySelector('.page-head .btn');
+    expect(headBtn?.className).toContain('btn-primary');
+    expect(container.querySelector('.empty .btn')).toBeNull();
+  });
+
   it('creates an intent: optimistic prepend + toast + navigate', async () => {
     const onOpen = vi.fn();
     const { container, api } = await renderLoaded({}, onOpen);
