@@ -17,3 +17,4 @@ data/
 *.db-shm
 .vitest/
 coverage/
+Test Account 1_secret_key.pem

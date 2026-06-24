@@ -1,4 +1,13 @@
-import { RpcError, RpcResponse, type IHandler, type RpcRequest } from 'casper-js-sdk';
+import Casper from 'casper-js-sdk';
+import type { IHandler, RpcRequest } from 'casper-js-sdk';
+
+// casper-js-sdk@5.0.12 ships as a webpack-bundled CJS module; Node's native ESM
+// loader can't statically detect its named exports, so `import { RpcError }` is
+// undefined at runtime (esbuild/vitest paper over it; the real process boot
+// fails). The default import resolves to module.exports — destructure the values
+// from it and recover RpcResponse's dual-use class type via InstanceType.
+const { RpcError, RpcResponse } = Casper;
+type RpcResponse = InstanceType<typeof RpcResponse>;
 
 /**
  * Drives the SDK's `RpcClient` over an injected `fetch`. The client builds the

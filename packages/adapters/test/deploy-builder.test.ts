@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { Args, CLValue, Deploy, KeyAlgorithm, PrivateKey } from 'casper-js-sdk';
 import {
   buildContractCallDeploy,
+  buildNativeTransferDeploy,
   buildVaultInstallDeploy,
   buildVersionedContractCallDeploy,
+  deployAccountFromEnvelope,
   deployHashFromEnvelope,
 } from '../src/deploy-builder.js';
 
@@ -172,5 +174,29 @@ describe('deployHashFromEnvelope', () => {
     const env = contractCall(senderHex());
     const tampered = { ...env, bodyHashHex: 'b'.repeat(64) };
     expect(deployHashFromEnvelope(tampered)).not.toBe(tampered.bodyHashHex);
+  });
+});
+
+describe('deployAccountFromEnvelope', () => {
+  it('keylessly recovers the deploy account (the key that will sign and pay)', () => {
+    const sender = senderHex();
+    const env = contractCall(sender);
+    expect(deployAccountFromEnvelope(env)).toBe(sender);
+  });
+
+  it('recovers the initiator pubkey from a Casper 2.0 native TransactionV1 envelope', () => {
+    // A native CSPR transfer's headerJson is a bare TransactionV1, not a legacy
+    // Deploy — Deploy.fromJSON throws on it. Recovery must parse the unified
+    // Transaction and read the initiator (the user pubkey that signs AND pays).
+    const sender = senderHex();
+    const env = buildNativeTransferDeploy({
+      chainName: CHAIN,
+      senderPk: sender,
+      paymentMotes: '100000000',
+      recipient: senderHex(),
+      amountMotes: '2500000000',
+      timestampMs: FIXED_TS,
+    });
+    expect(deployAccountFromEnvelope(env)).toBe(sender);
   });
 });

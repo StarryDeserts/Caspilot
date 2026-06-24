@@ -9,8 +9,20 @@ import type { CreateIntentBody } from '../lib/api.js';
 // inline via `serverError`.
 const HEX = /^00[0-9a-fA-F]{64}$/;
 const DEC = /^[0-9]+(\.[0-9]+)?$/;
+// Native transfers target a PublicKey (01 + ED25519 / 02 + SECP256K1), not an
+// account-hash — the node credits the account derived from it.
+const PUBKEY = /^(?:01[0-9a-fA-F]{64}|02[0-9a-fA-F]{66})$/;
 
 const NETWORK = 'casper:casper-test';
+
+// The native-CSPR path carries no contract package; this sentinel fills the
+// intent's `contract` field. MUST match NATIVE_SENTINEL_PACKAGE in the API's
+// deps.ts, which allowlists it and lets the router branch to the native builder.
+const NATIVE_SENTINEL = 'native-cspr-transfer';
+
+// CEP-18 moves a token through its package; Native CSPR moves the chain's own
+// value (the only shape the live CSPR.click co-sign path can actually broadcast).
+type Mode = 'cep18' | 'native';
 
 interface Fields {
   agent: string;
@@ -28,12 +40,19 @@ const EMPTY: Fields = {
   amount: '',
 };
 
-function validate(f: Fields): Partial<Record<keyof Fields, string>> {
+function validate(f: Fields, mode: Mode): Partial<Record<keyof Fields, string>> {
   const errs: Partial<Record<keyof Fields, string>> = {};
   if (!HEX.test(f.agent.trim())) errs.agent = 'agent must be 00 + 64 hex chars';
-  if (!HEX.test(f.receiver.trim())) errs.receiver = 'receiver must be 00 + 64 hex chars';
-  if (!HEX.test(f.contract.trim())) errs.contract = 'contract must be 00 + 64 hex chars';
-  if (f.token.trim() === '') errs.token = 'token is required';
+  if (mode === 'native') {
+    // Native targets a PublicKey (the node credits the derived account); the
+    // value moved is CSPR itself, so there's no token/contract package to check.
+    if (!PUBKEY.test(f.receiver.trim()))
+      errs.receiver = 'receiver must be a public key (01/02 + hex)';
+  } else {
+    if (!HEX.test(f.receiver.trim())) errs.receiver = 'receiver must be 00 + 64 hex chars';
+    if (!HEX.test(f.contract.trim())) errs.contract = 'contract must be 00 + 64 hex chars';
+    if (f.token.trim() === '') errs.token = 'token is required';
+  }
   if (!DEC.test(f.amount.trim())) errs.amount = 'amount must be a decimal string';
   return errs;
 }
@@ -61,10 +80,12 @@ export function NewIntentDrawer({
   onCreate: (value: CreateIntentBody) => void;
 }) {
   const [f, setF] = useState<Fields>(EMPTY);
+  const [mode, setMode] = useState<Mode>('cep18');
+  const isNative = mode === 'native';
   // Errors show only after a submit attempt, then track live edits — so the
   // drawer isn't pre-painted red, but a flagged field clears as you fix it.
   const [touched, setTouched] = useState(false);
-  const errs = touched ? validate(f) : {};
+  const errs = touched ? validate(f, mode) : {};
 
   function field<K extends keyof Fields>(k: K) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -73,24 +94,33 @@ export function NewIntentDrawer({
 
   function submit() {
     setTouched(true);
-    const e = validate(f);
+    const e = validate(f, mode);
     if (Object.keys(e).length > 0) return;
     onCreate({
       agent: f.agent.trim(),
       receiver: f.receiver.trim(),
-      contract: f.contract.trim(),
-      token: f.token.trim(),
+      // Native carries no package: the sentinel fills `contract` and token is the
+      // chain's own 'CSPR'. CEP-18 passes the user's package + token through.
+      contract: isNative ? NATIVE_SENTINEL : f.contract.trim(),
+      token: isNative ? 'CSPR' : f.token.trim(),
       network: NETWORK,
       amount: f.amount.trim(),
     });
   }
 
-  const rows: Array<{ id: keyof Fields; label: string }> = [
-    { id: 'agent', label: 'Agent · account-hash (00 + 64 hex)' },
-    { id: 'receiver', label: 'Receiver · account-hash (00 + 64 hex)' },
-    { id: 'token', label: 'Token' },
-    { id: 'contract', label: 'Contract · account-hash (00 + 64 hex)' },
-  ];
+  // Native mode shows only agent + a PublicKey receiver; CEP-18 also takes the
+  // token symbol and its contract package (both account-hash hex).
+  const rows: Array<{ id: keyof Fields; label: string }> = isNative
+    ? [
+        { id: 'agent', label: 'Agent · account-hash (00 + 64 hex)' },
+        { id: 'receiver', label: 'Receiver · public key (01/02 + hex)' },
+      ]
+    : [
+        { id: 'agent', label: 'Agent · account-hash (00 + 64 hex)' },
+        { id: 'receiver', label: 'Receiver · account-hash (00 + 64 hex)' },
+        { id: 'token', label: 'Token' },
+        { id: 'contract', label: 'Contract · account-hash (00 + 64 hex)' },
+      ];
 
   return (
     <>
@@ -111,6 +141,28 @@ export function NewIntentDrawer({
             <div className="ia-body">
               Couldn't create intent
               {serverError ? <div className="ia-code">{serverError}</div> : null}
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Transfer type</label>
+            <div className="segmented" role="group" aria-label="Transfer type">
+              <button
+                type="button"
+                className={`seg${!isNative ? ' active' : ''}`}
+                aria-pressed={!isNative}
+                onClick={() => setMode('cep18')}
+              >
+                CEP-18 token
+              </button>
+              <button
+                type="button"
+                className={`seg${isNative ? ' active' : ''}`}
+                aria-pressed={isNative}
+                onClick={() => setMode('native')}
+              >
+                Native CSPR
+              </button>
             </div>
           </div>
 
@@ -146,7 +198,7 @@ export function NewIntentDrawer({
           </div>
 
           <div className={`field${errs.amount ? ' has-err' : ''}`} id="f-amount">
-            <label htmlFor="amount">Amount · decimal string</label>
+            <label htmlFor="amount">{isNative ? 'Amount · motes' : 'Amount · decimal string'}</label>
             <input
               id="amount"
               spellCheck={false}

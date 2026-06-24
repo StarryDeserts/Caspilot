@@ -11,7 +11,7 @@ describe('bundle secret scanner', () => {
   it('flags files containing forbidden substrings', () => {
     const result = scanFiles([{ path: 'a.js', text: 'const k = "CSPR_CLOUD_KEY=abc";' }]);
     expect(result.violations.length).toBe(1);
-    expect(result.violations[0].pattern).toBe('CSPR_CLOUD_KEY');
+    expect(result.violations[0]?.pattern).toBe('CSPR_CLOUD_KEY');
   });
 
   it('does not flag clean files', () => {

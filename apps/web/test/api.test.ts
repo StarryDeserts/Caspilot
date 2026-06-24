@@ -20,7 +20,7 @@ describe('CaspilotApi', () => {
       amount: '100',
     });
     expect(r.id).toBe('int_abc');
-    expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/intents');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api.test/intents');
   });
 
   it('throws if baseUrl is empty', () => {
@@ -67,7 +67,7 @@ describe('CaspilotApi', () => {
 
   it('listIntents() GETs /intents and unwraps the envelope to an array', async () => {
     const fetchMock = vi.fn(
-      async () =>
+      async (_url: string) =>
         new Response(
           JSON.stringify({ intents: [{ id: 'int_a', state: 'DRAFT', updatedAtMs: 2 }] }),
           { status: 200 },
@@ -84,7 +84,7 @@ describe('CaspilotApi', () => {
 
   it('markExecuted() POSTs the deployHash to mark-executed', async () => {
     const fetchMock = vi.fn(
-      async () =>
+      async (_url: string, _init?: RequestInit) =>
         new Response(JSON.stringify({ id: 'int_a', state: 'EXECUTED', deployHash: 'ab'.repeat(32) }), {
           status: 200,
         }),
@@ -144,7 +144,7 @@ describe('CaspilotApi', () => {
 
   it('listVaults() GETs /vaults and unwraps the envelope to an array', async () => {
     const fetchMock = vi.fn(
-      async () =>
+      async (_url: string) =>
         new Response(JSON.stringify({ vaults: [{ id: 'vault_abc', usedTodayAtomic: '0' }] }), {
           status: 200,
         }),
@@ -160,7 +160,7 @@ describe('CaspilotApi', () => {
 
   it('getVault(id) GETs /vaults/:id and returns the detail', async () => {
     const fetchMock = vi.fn(
-      async () =>
+      async (_url: string) =>
         new Response(JSON.stringify({ id: 'vault_abc', recentDebits: [] }), { status: 200 }),
     );
     const api = new CaspilotApi({
@@ -207,5 +207,77 @@ describe('CaspilotApi', () => {
     } finally {
       (globalThis as unknown as { fetch: unknown }).fetch = orig;
     }
+  });
+
+  it('buildUnsignedDeploy() POSTs the signerPk and returns the unsigned envelope', async () => {
+    const envelope = {
+      headerJson: { header: {} },
+      bodyHashHex: 'aa'.repeat(32),
+      payloadHex: 'bb'.repeat(32),
+    };
+    const fetchMock = vi.fn(
+      async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ envelope }), { status: 200 }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    const signerPk = '01' + 'ab'.repeat(32);
+    const r = await api.buildUnsignedDeploy('int_a', signerPk);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      'http://api.test/intents/int_a/build-unsigned-deploy',
+    );
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ signerPk });
+    expect(r.envelope.bodyHashHex).toBe('aa'.repeat(32));
+  });
+
+  it('buildUnsignedDeploy() throws on a 422 policy denial, surfacing the code', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ code: 'amount_above_single_cap' }), { status: 422 }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    await expect(api.buildUnsignedDeploy('int_a', '01' + 'ab'.repeat(32))).rejects.toThrow(
+      /buildUnsignedDeploy 422.*amount_above_single_cap/,
+    );
+  });
+
+  it('confirmOnchain() POSTs the deployHash and returns the executed result', async () => {
+    const deployHash = 'cd'.repeat(32);
+    const fetchMock = vi.fn(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(JSON.stringify({ id: 'int_a', state: 'EXECUTED', deployHash }), {
+          status: 200,
+        }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    const r = await api.confirmOnchain('int_a', deployHash);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api.test/intents/int_a/confirm-onchain');
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ deployHash });
+    expect(r.state).toBe('EXECUTED');
+    expect(r.deployHash).toBe(deployHash);
+  });
+
+  it('confirmOnchain() throws on a 422 when the deploy never finalized / reverted', async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ code: 'execution_reverted' }), { status: 422 }),
+    );
+    const api = new CaspilotApi({
+      baseUrl: 'http://api.test',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+    await expect(api.confirmOnchain('int_a', 'cd'.repeat(32))).rejects.toThrow(
+      /confirmOnchain 422.*execution_reverted/,
+    );
   });
 });

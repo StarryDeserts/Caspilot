@@ -12,6 +12,13 @@ import {
   type SpendReservation,
 } from '@caspilot/signer-guard';
 import { PlannerRedactor, type AuditTraceStore } from '@caspilot/audit-trace';
+import { buildCep18TransferDeploy, buildNativeTransferDeploy } from '@caspilot/adapters';
+
+// Algorithm-tagged Casper public key hex: 01 + ED25519 (32 bytes) or 02 +
+// SECP256K1 (33 bytes). This is the user's wallet key — the deploy account that
+// CSPR.click signs and pays from. We validate shape only; on-chain validity is
+// the wallet's concern.
+const CASPER_PK_RE = /^(?:01[0-9a-fA-F]{64}|02[0-9a-fA-F]{66})$/;
 
 const CreateBody = z.object({
   agent: z.string(),
@@ -22,12 +29,32 @@ const CreateBody = z.object({
   amount: z.string(),
 });
 
+// Structural view of CasperDeployAdapter.awaitDeployFinalized — kept minimal so
+// the API never imports casper-js-sdk at the type level. Live wiring injects the
+// real adapter; tests inject a stub.
+export interface DeployReader {
+  awaitDeployFinalized(deployHash: string): Promise<{
+    finalizedHeight: number;
+    success: boolean;
+    errorCode?: number;
+    // Which on-chain variant resolved the hash: a legacy 'deploy' or a Casper 2.0
+    // 'transaction' (native CSPR transfers). Optional so presence-only stub readers
+    // need not set it; the real adapter always does. Persisted in the audit event so
+    // the trace routes the correct cspr.live URL (chain-resolved, never client-said).
+    hashKind?: 'deploy' | 'transaction';
+  }>;
+}
+
 export interface IntentRouterDeps {
   guard: SignerGuard;
   policy: SignerGuardPolicy;
   audit: AuditTraceStore;
   spendLedger: SpendLedger;
   now?: () => number;
+  // Present only in live wiring (real RPC keys). Their presence mounts the
+  // on-chain co-sign endpoints; pure-demo mode omits them and keeps mark-executed.
+  unsignedDeploy?: { chainName: string; paymentMotes: string };
+  deployReader?: DeployReader;
 }
 
 // Single-signer demo: the spend ledger keys day-cap + replay accounting on a
@@ -49,6 +76,9 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
       body: z.infer<typeof CreateBody>;
       createdAtMs: number;
       updatedAtMs: number;
+      // The verified on-chain deploy hash, set once confirm-onchain finalizes.
+      // Retained so a repeat confirm is idempotent without re-reading the chain.
+      deployHash?: string;
     }
   > = new Map();
 
@@ -203,6 +233,168 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
     });
     return c.json({ id, state: 'EXECUTED', deployHash: body.deployHash });
   });
+
+  // On-chain co-sign endpoints mount only with live deploy config. Pure-demo mode
+  // (no RPC keys) omits deps.unsignedDeploy and relies on mark-executed instead.
+  if (deps.unsignedDeploy) {
+    const unsignedDeploy = deps.unsignedDeploy;
+    // Build an UNSIGNED CEP-18 transfer for the user's own wallet to sign + pay
+    // via CSPR.click. No key touches this server: signerPk is the user's PUBLIC
+    // key and becomes the deploy account. Pure CPU — no state change, no
+    // broadcast; confirm-onchain is what records a verified execution.
+    r.post('/:id/build-unsigned-deploy', async (c) => {
+      const id = c.req.param('id');
+      const entry = state.get(id);
+      if (!entry) return c.json({ error: 'not_found' }, 404);
+      let body: { signerPk?: unknown };
+      try {
+        body = (await c.req.json()) as { signerPk?: unknown };
+      } catch {
+        return c.json({ error: 'invalid_json' }, 400);
+      }
+      const signerPk = body.signerPk;
+      if (typeof signerPk !== 'string' || !CASPER_PK_RE.test(signerPk)) {
+        return c.json({ error: 'invalid_signer_pk' }, 400);
+      }
+      // Defense-in-depth: independently re-assert policy on the intended params
+      // before emitting any deploy bytes, regardless of how the intent got here.
+      const denial = checkPolicyRules({
+        policy: deps.policy,
+        intentId: id,
+        traceId: id,
+        signerRole: deps.policy.signerRole,
+        signerPk,
+        unsignedDeploy: { headerJson: {}, bodyHashHex: '00'.repeat(32), payloadHex: '' },
+        intendedContractPackage: entry.body.contract,
+        intendedReceiver: entry.body.receiver,
+        intendedToken: entry.body.token,
+        intendedAmountAtomic: entry.body.amount,
+        intendedChainId: entry.body.network,
+      });
+      if (denial) return c.json({ error: 'policy_denied', code: denial }, 422);
+      if (entry.state !== 'POLICY_VALIDATED') {
+        return c.json({ error: 'invalid_state', state: entry.state }, 409);
+      }
+      // token 'CSPR' moves native value: emit a `transfer` session paid from the
+      // user's own wallet (no CEP-18 balance needed — the path that can actually
+      // broadcast on testnet). Any other token is a CEP-18 versioned-package call.
+      // The recipient/amount differ by unit: native targets a PublicKey with motes;
+      // CEP-18 targets an account-hash Key with token base units.
+      //
+      // A native transfer needs DISTINCT source/target purses. signerPk == the
+      // receiver pubkey ⇒ same purse ⇒ the mint reverts on-chain ("Invalid purse",
+      // EqualSourceAndTarget). Refuse here, before emitting deploy bytes, so the
+      // wallet never pops and the user never burns gas on a doomed transfer.
+      // (buildNativeTransferDeploy enforces the same invariant as a backstop.)
+      if (
+        entry.body.token === 'CSPR' &&
+        signerPk.toLowerCase() === entry.body.receiver.toLowerCase()
+      ) {
+        return c.json({ error: 'self_transfer_forbidden' }, 422);
+      }
+      const envelope =
+        entry.body.token === 'CSPR'
+          ? buildNativeTransferDeploy({
+              chainName: unsignedDeploy.chainName,
+              senderPk: signerPk,
+              paymentMotes: unsignedDeploy.paymentMotes,
+              recipient: entry.body.receiver,
+              amountMotes: entry.body.amount,
+            })
+          : buildCep18TransferDeploy({
+              chainName: unsignedDeploy.chainName,
+              senderPk: signerPk,
+              paymentMotes: unsignedDeploy.paymentMotes,
+              tokenPackage: entry.body.contract,
+              recipient: entry.body.receiver,
+              amount: entry.body.amount,
+            });
+      return c.json({ envelope });
+    });
+  }
+
+  if (deps.deployReader) {
+    const deployReader = deps.deployReader;
+    // Confirm a wallet-broadcast deploy by INDEPENDENTLY verifying finality
+    // on-chain, then commit the reservation + record the REAL deploy hash. We
+    // never trust the client-supplied hash: a node throw (not yet known /
+    // transient) OR a revert both block the commit. Only a finalized success
+    // executes the intent. This is the demo's first genuinely UI-triggered,
+    // on-chain-verified proof.
+    r.post('/:id/confirm-onchain', async (c) => {
+      const id = c.req.param('id');
+      const entry = state.get(id);
+      if (!entry) return c.json({ error: 'not_found' }, 404);
+      let body: { deployHash?: unknown };
+      try {
+        body = (await c.req.json()) as { deployHash?: unknown };
+      } catch {
+        return c.json({ error: 'invalid_json' }, 400);
+      }
+      const deployHash = body.deployHash;
+      if (typeof deployHash !== 'string' || !/^[0-9a-f]{64}$/.test(deployHash)) {
+        return c.json({ error: 'invalid_deploy_hash' }, 400);
+      }
+      // Idempotent: once executed, re-confirming echoes the recorded result —
+      // no second chain read, no double commit.
+      if (entry.state === 'EXECUTED') {
+        return c.json({
+          id,
+          state: 'EXECUTED',
+          deployHash: entry.deployHash ?? deployHash,
+          alreadyConfirmed: true,
+        });
+      }
+      if (entry.state !== 'POLICY_VALIDATED') {
+        return c.json({ error: 'invalid_state', state: entry.state }, 409);
+      }
+      let finalization: {
+        finalizedHeight: number;
+        success: boolean;
+        errorCode?: number;
+        hashKind?: 'deploy' | 'transaction';
+      };
+      try {
+        finalization = await deployReader.awaitDeployFinalized(deployHash);
+      } catch {
+        // Not yet finalized (or the node doesn't know this hash). Honest outcome:
+        // unverified ⇒ do not commit, do not execute.
+        return c.json({ error: 'deploy_not_finalized' }, 422);
+      }
+      if (!finalization.success) {
+        // A revert is honest provenance, not a server error: the user's tx was
+        // mined but failed (e.g. PolicyVault rejection). Surface the code; keep
+        // the reservation held and the intent un-executed.
+        return c.json({ error: 'execution_reverted', errorCode: finalization.errorCode }, 422);
+      }
+      const t = now();
+      const reservation = deps.spendLedger.findByIntentId(id);
+      if (reservation && reservation.status === 'reserved') {
+        await deps.spendLedger.commit(reservation.id);
+      }
+      entry.state = 'EXECUTED';
+      entry.deployHash = deployHash;
+      entry.updatedAtMs = t;
+      // Attribute the execution to the user's wallet co-sign (signed AND paid from
+      // their own key via CSPR.click) — NOT the agent's autonomous server signer.
+      deps.audit.append({
+        intentId: id,
+        state: 'EXECUTED',
+        atMs: t,
+        kind: 'execution',
+        payload: {
+          deployHash,
+          signerRole: 'user_cspr_click',
+          approval: 'human_cosign',
+          finalizedHeight: finalization.finalizedHeight,
+          // Chain-resolved variant ('deploy' | 'transaction') so the trace links
+          // the correct cspr.live path. Omitted when the reader didn't report one.
+          ...(finalization.hashKind ? { hashKind: finalization.hashKind } : {}),
+        },
+      });
+      return c.json({ id, state: 'EXECUTED', deployHash });
+    });
+  }
 
   r.get('/:id/trace', (c) => {
     const id = c.req.param('id');

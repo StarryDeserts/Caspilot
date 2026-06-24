@@ -13,7 +13,7 @@ export function FsmStepper({ entries, corner }: { entries: TraceEntry[]; corner?
       <div className="stepper">
         {steps.map((s) => (
           <div key={s.state} className={`step${s.status === 'future' ? '' : ` ${s.status}`}`}>
-            <div className="connector" />
+            <div className={`connector${s.linkDone ? ' done' : ''}`} />
             <div className="node">
               {s.status === 'done' ? (
                 <svg viewBox="0 0 24 24" aria-hidden="true">

@@ -1,7 +1,12 @@
-import { EntityIdentifier, PublicKey, RpcClient } from 'casper-js-sdk';
+import Casper from 'casper-js-sdk';
 import type { QueryGlobalStateResult, StateGetEntityResult } from 'casper-js-sdk';
 import type { NamedKeyEntry, NamedKeysReader } from './package-hash-recovery.js';
 import { FetchHandler } from './rpc-fetch-handler.js';
+
+// See rpc-fetch-handler.ts: casper-js-sdk is CJS, so destructure values from the
+// default import and recover EntityIdentifier's dual-use type via InstanceType.
+const { EntityIdentifier, PublicKey, RpcClient } = Casper;
+type EntityIdentifier = InstanceType<typeof EntityIdentifier>;
 
 /**
  * The narrow slice of the SDK's `RpcClient` the reader drives. Injecting this

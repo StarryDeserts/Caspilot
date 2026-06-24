@@ -1,6 +1,11 @@
-import { Deploy, PublicKey, RpcClient } from 'casper-js-sdk';
+import Casper from 'casper-js-sdk';
 import type { UnsignedDeployEnvelope } from '@caspilot/signer-guard';
 import { FetchHandler } from './rpc-fetch-handler.js';
+
+// See rpc-fetch-handler.ts: casper-js-sdk is CJS, so destructure values from the
+// default import and recover Deploy's dual-use type via InstanceType.
+const { Deploy, PublicKey, RpcClient } = Casper;
+type Deploy = InstanceType<typeof Deploy>;
 
 export interface CasperDeployOptions {
   url: string;
@@ -30,6 +35,14 @@ export interface DeployFinalization {
   success: boolean;
   /** The contract's numeric revert code, when one was reported. */
   errorCode?: number;
+  /**
+   * Which on-chain variant actually resolved the hash: a legacy `deploy`
+   * (Deploy-first probe) or a Casper 2.0 `transaction` (Version1 fallback —
+   * native CSPR transfers). The authoritative, chain-resolved source for the
+   * cspr.live URL kind, so we never guess /deploy/ vs /transaction/ from a
+   * client-supplied hint.
+   */
+  hashKind: 'deploy' | 'transaction';
 }
 
 interface JsonRpcEnvelope<T> {
@@ -86,11 +99,11 @@ export class CasperDeployAdapter {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // On Condor 2.0 a legacy deploy submitted via account_put_deploy is wrapped
       // as a transaction: info_get_deploy returns execution_info:null forever, so
-      // we observe via info_get_transaction (getTransactionByDeployHash). A throw
-      // means the node does not know the deploy yet (or a transient RPC error) —
-      // both are "not finalized", so fall through to the next attempt.
-      const res = await client.getTransactionByDeployHash(deployHash).catch(() => undefined);
-      const info = res?.executionInfo;
+      // we observe via info_get_transaction. The hash may be a legacy Deploy hash
+      // OR a 2.0 TransactionV1 hash (native CSPR transfers are V1) — readExecutionInfo
+      // probes the Deploy variant first and falls back to the V1 variant only on a
+      // NoSuchTransaction throw. Both-unknown is "not finalized": poll the next attempt.
+      const { info, hashKind } = await readExecutionInfo(client, deployHash);
       // Block inclusion alone is not a result: execution_info can carry a block
       // height a beat before the execution_result is attached. Treat "in a block
       // but no result yet" as not-finalized and keep polling for the result.
@@ -99,6 +112,7 @@ export class CasperDeployAdapter {
         const finalization: DeployFinalization = {
           finalizedHeight: info.blockHeight,
           success: !errorMessage,
+          hashKind,
         };
         // Attribute a numeric revert code only from Casper's canonical
         // "User error: <code>" form. A stray number in any other message must
@@ -152,6 +166,31 @@ export class CasperDeployAdapter {
     } finally {
       clearTimeout(t);
     }
+  }
+}
+
+/**
+ * Reads execution info for a hash that may be EITHER a legacy Deploy hash OR a
+ * Casper 2.0 TransactionV1 hash.
+ *
+ * Probe the Deploy variant first: that keeps the legacy/Tier-1 observe path
+ * byte-for-byte unchanged, and a known-but-pending deploy RESOLVES (its
+ * executionInfo may be undefined) so we never spuriously query the other variant.
+ * Only when the Deploy lookup THROWS (NoSuchTransaction — the hash is not a
+ * deploy) do we fall back to the TransactionV1 lookup; native CSPR transfers are
+ * V1 and addressable only by transaction hash. Both unknown ⇒ undefined: still
+ * propagating, so the caller keeps polling.
+ */
+async function readExecutionInfo(client: InstanceType<typeof RpcClient>, hash: string) {
+  try {
+    const res = await client.getTransactionByDeployHash(hash);
+    return { info: res?.executionInfo, hashKind: 'deploy' as const };
+  } catch {
+    const info = await client
+      .getTransactionByTransactionHash(hash)
+      .then((res) => res?.executionInfo)
+      .catch(() => undefined);
+    return { info, hashKind: 'transaction' as const };
   }
 }
 

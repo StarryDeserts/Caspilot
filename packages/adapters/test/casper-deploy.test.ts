@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CLValue, Deploy, KeyAlgorithm, PrivateKey } from 'casper-js-sdk';
-import { buildContractCallDeploy } from '../src/deploy-builder.js';
+import { buildContractCallDeploy, buildNativeTransferDeploy } from '../src/deploy-builder.js';
 import { CasperDeployAdapter } from '../src/casper-deploy.js';
 
 const FIXED_TS = 1_700_000_000_000;
@@ -130,6 +130,70 @@ function unknownDeploy(): Response {
   });
 }
 
+type NativeEnvelope = ReturnType<typeof buildNativeTransferDeploy>;
+
+// An offline Casper 2.0 native CSPR transfer envelope (a TransactionV1, not a
+// legacy Deploy). Its bodyHashHex IS the transaction hash the node indexes it by.
+function nativeEnvFixture(amount = '2500000000'): NativeEnvelope {
+  const sk = PrivateKey.generate(KeyAlgorithm.ED25519);
+  const recipient = PrivateKey.generate(KeyAlgorithm.ED25519).publicKey.toHex(false);
+  return buildNativeTransferDeploy({
+    chainName: 'casper-test',
+    senderPk: sk.publicKey.toHex(false),
+    paymentMotes: '100000000',
+    recipient,
+    amountMotes: amount,
+    timestampMs: FIXED_TS,
+  });
+}
+
+// A finalized native TransactionV1 result. A 2.0 transaction rides under
+// `transaction.Version1` (a legacy deploy rode under `.Deploy`) and is
+// addressable ONLY by its transaction hash. A null error_message is a success;
+// "Invalid purse" is the Condor revert the legacy native-transfer path hit.
+function finalizedNativeV1(
+  env: NativeEnvelope,
+  opts: { height: number; errorMessage?: string },
+): Response {
+  return jsonResponse({
+    jsonrpc: '2.0',
+    id: '1',
+    result: {
+      api_version: '2.0.0',
+      transaction: { Version1: env.headerJson },
+      execution_info: {
+        block_hash: 'b'.repeat(64),
+        block_height: opts.height,
+        execution_result: {
+          Version2: {
+            initiator: { AccountHash: 'account-hash-' + 'c'.repeat(64) },
+            error_message: opts.errorMessage ?? null,
+            limit: '1',
+            consumed: '1',
+            refund: '0',
+            current_price: 1,
+            cost: '1',
+            transfers: [],
+            size_estimate: 1,
+            effects: [],
+          },
+        },
+      },
+    },
+  });
+}
+
+// Routes info_get_transaction by the transaction-hash variant the adapter asks
+// for. A native V1 is NoSuchTransaction under the Deploy variant (the Deploy-first
+// probe throws) and resolves only under Version1 — exactly what the live node does.
+function byVariant(handlers: { deploy: () => Response; version1: () => Response }) {
+  return (_url: string, init: RequestInit) => {
+    const sent = JSON.parse(init.body as string);
+    const th = sent.params?.transaction_hash ?? {};
+    return 'Version1' in th ? handlers.version1() : handlers.deploy();
+  };
+}
+
 describe('CasperDeployAdapter.submitSignedDeploy', () => {
   it('reattaches the signature and broadcasts a deploy that validates over its own hash', async () => {
     const { env, signerPk, signatureHex } = signedFixture();
@@ -230,8 +294,9 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
 
     const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
 
-    // Success carries no errorCode at all (not an undefined key).
-    expect(out).toEqual({ finalizedHeight: 4242, success: true });
+    // Success carries no errorCode at all (not an undefined key). Resolved via
+    // the Deploy-first probe, so the recorded provenance is a legacy deploy.
+    expect(out).toEqual({ finalizedHeight: 4242, success: true, hashKind: 'deploy' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     // It observed via info_get_transaction (the Condor path for legacy deploys),
@@ -252,7 +317,7 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
 
     const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
 
-    expect(out).toEqual({ finalizedHeight: 77, success: false, errorCode: 60004 });
+    expect(out).toEqual({ finalizedHeight: 77, success: false, errorCode: 60004, hashKind: 'deploy' });
   });
 
   it('does not mislabel an incidental number in a non-User-error revert as a code', async () => {
@@ -268,7 +333,7 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
 
     // Reverted, but the code is unknown — an absent errorCode is more honest
     // than a false one scraped from an unrelated number.
-    expect(out).toEqual({ finalizedHeight: 88, success: false });
+    expect(out).toEqual({ finalizedHeight: 88, success: false, hashKind: 'deploy' });
   });
 
   it('polls past a pending (accepted-but-not-executed) deploy until it finalizes', async () => {
@@ -285,7 +350,7 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
       pollIntervalMs: 1234,
     });
 
-    expect(out).toEqual({ finalizedHeight: 9000, success: true });
+    expect(out).toEqual({ finalizedHeight: 9000, success: true, hashKind: 'deploy' });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledTimes(1);
     expect(sleep).toHaveBeenCalledWith(1234);
@@ -293,16 +358,24 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
 
   it('retries through the propagation window where the node does not yet know the deploy', async () => {
     const env = envFixture();
+    // Propagation: the deploy 404s on the first probe, then lands as a deploy.
+    // The V1 fallback 404s throughout (this is a legacy deploy, never a
+    // transaction), so the result must arrive via the deploy probe — and the
+    // resolved provenance is therefore honestly 'deploy', not 'transaction'.
+    const deploy = vi
+      .fn()
+      .mockReturnValueOnce(unknownDeploy())
+      .mockReturnValue(finalizedDeploy(env, { height: 5 }));
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(unknownDeploy())
-      .mockResolvedValueOnce(finalizedDeploy(env, { height: 5 }));
+      .mockImplementation(byVariant({ deploy: () => deploy(), version1: () => unknownDeploy() }));
     const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
 
     const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
 
-    expect(out).toEqual({ finalizedHeight: 5, success: true });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(out).toEqual({ finalizedHeight: 5, success: true, hashKind: 'deploy' });
+    // attempt 0: deploy(unknown→throws) → version1(unknown); attempt 1: deploy(finalized).
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it('does not read block inclusion without an execution result as finalized', async () => {
@@ -317,7 +390,7 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
     const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
 
     // It reports the height where the result actually landed, not the bare inclusion.
-    expect(out).toEqual({ finalizedHeight: 6002, success: true });
+    expect(out).toEqual({ finalizedHeight: 6002, success: true, hashKind: 'deploy' });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -333,6 +406,76 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     // Sleeps between attempts only — never after the final one.
     expect(sleep).toHaveBeenCalledTimes(2);
+  });
+
+  it('finalizes a native TransactionV1 addressed by its transaction hash (the Casper 2.0 path)', async () => {
+    const env = nativeEnvFixture();
+    const fetchMock = vi.fn().mockImplementation(
+      byVariant({
+        deploy: () => unknownDeploy(),
+        version1: () => finalizedNativeV1(env, { height: 8273600 }),
+      }),
+    );
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    expect(out).toEqual({ finalizedHeight: 8273600, success: true, hashKind: 'transaction' });
+    // The crux: it probes the Deploy variant FIRST (the legacy/Tier-1 path stays
+    // untouched), then falls back to the Version1 transaction-hash lookup only
+    // after that 404s — never the other way around.
+    const variants = fetchMock.mock.calls.map(
+      ([, init]) =>
+        Object.keys(JSON.parse((init as RequestInit).body as string).params.transaction_hash)[0],
+    );
+    expect(variants).toEqual(['Deploy', 'Version1']);
+  });
+
+  it('reports an "Invalid purse" native revert as success:false with no scraped code', async () => {
+    const env = nativeEnvFixture();
+    const fetchMock = vi.fn().mockImplementation(
+      byVariant({
+        deploy: () => unknownDeploy(),
+        version1: () => finalizedNativeV1(env, { height: 8273600, errorMessage: 'Invalid purse' }),
+      }),
+    );
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    // A reverted native transfer must verify as a NON-success so confirm-onchain
+    // refuses to commit — and "Invalid purse" carries no "User error: N", so no
+    // false numeric code is attached (honest "reverted, code unknown").
+    expect(out).toEqual({ finalizedHeight: 8273600, success: false, hashKind: 'transaction' });
+  });
+
+  it('reports hashKind "deploy" when the legacy Deploy variant resolves the hash', async () => {
+    const env = envFixture();
+    const fetchMock = vi.fn().mockResolvedValue(finalizedDeploy(env, { height: 4242 }));
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    // The verifier resolved the hash via the Deploy-first probe, so the recorded
+    // provenance is a legacy deploy and confirm-onchain routes cspr.live /deploy/.
+    expect(out.hashKind).toBe('deploy');
+  });
+
+  it('reports hashKind "transaction" when the native TransactionV1 variant resolves the hash', async () => {
+    const env = nativeEnvFixture();
+    const fetchMock = vi.fn().mockImplementation(
+      byVariant({
+        deploy: () => unknownDeploy(),
+        version1: () => finalizedNativeV1(env, { height: 8273600 }),
+      }),
+    );
+    const adapter = new CasperDeployAdapter({ url: RPC_URL, fetch: fetchMock });
+
+    const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
+
+    // Resolved only via the Version1 transaction-hash fallback ⇒ Casper 2.0
+    // transaction provenance ⇒ confirm-onchain routes cspr.live /transaction/.
+    expect(out.hashKind).toBe('transaction');
   });
 });
 

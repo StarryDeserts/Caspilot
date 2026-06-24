@@ -38,6 +38,10 @@ export interface IntentView {
   body?: IntentBody | undefined;
   policyDigest?: string | undefined;
   deployHash?: string | undefined;
+  // The chain-resolved hash kind recorded by confirm-onchain: 'transaction' for a
+  // Casper 2.0 TransactionV1, 'deploy' (or absent) for a legacy Deploy. Drives the
+  // cspr.live URL kind — never client-supplied, always verifier-originated.
+  deployHashKind?: 'deploy' | 'transaction' | undefined;
   rejectionCode?: string | undefined;
   rejectionReason?: string | undefined;
 }
@@ -67,6 +71,8 @@ export function deriveIntent(entries: TraceEntry[]): IntentView {
       else if (p.allowed === false) view.rejectionCode = str(p.code);
     } else if (e.kind === 'execution') {
       view.deployHash = str(p.deployHash);
+      const kind = str(p.hashKind);
+      view.deployHashKind = kind === 'transaction' || kind === 'deploy' ? kind : undefined;
     } else if (e.kind === 'rejected') {
       view.rejectionReason = str(p.reason);
     }
@@ -79,6 +85,11 @@ export type StepStatus = 'done' | 'current' | 'future';
 export interface StepNode {
   state: HappyState;
   status: StepStatus;
+  // The connector drawn to the RIGHT of this node is "done" (green) only when this
+  // transition actually happened — i.e. BOTH this node and its successor appear in
+  // the trace. This keeps the green rail from dangling into a skipped/never-reached
+  // node. Always false for the terminal node (it has no outgoing connector).
+  linkDone: boolean;
 }
 
 export interface StepperModel {
@@ -98,12 +109,14 @@ export function buildStepper(entries: TraceEntry[]): StepperModel {
     ? (final as OffRampState)
     : undefined;
 
-  const steps: StepNode[] = HAPPY_PATH.map((state) => {
+  const steps: StepNode[] = HAPPY_PATH.map((state, i) => {
     let status: StepStatus;
     if (!activeOffRamp && state === final) status = 'current';
     else if (reached.has(state)) status = 'done';
     else status = 'future';
-    return { state, status };
+    const next = HAPPY_PATH[i + 1];
+    const linkDone = next !== undefined && reached.has(state) && reached.has(next);
+    return { state, status, linkDone };
   });
 
   return activeOffRamp ? { steps, activeOffRamp } : { steps };

@@ -15,6 +15,12 @@ export interface ActionsPanelProps {
   onValidate: () => void;
   onMarkExecuted: (deployHash: string) => void;
   onReject: (reason: string) => void;
+  // Wired only when the live CSPR.click flow is available. When present, the
+  // human co-sign button (real wallet popup + real broadcast) becomes the
+  // primary action and the demo mark-executed input drops to a fallback.
+  onSignAndSubmit?: (() => void) | undefined;
+  walletConnected?: boolean | undefined;
+  signStatus?: string | null | undefined;
 }
 
 const DEPLOY_HASH_RE = /^[0-9a-f]{64}$/;
@@ -38,6 +44,9 @@ export function ActionsPanel({
   onValidate,
   onMarkExecuted,
   onReject,
+  onSignAndSubmit,
+  walletConnected,
+  signStatus,
 }: ActionsPanelProps) {
   const [deployHash, setDeployHash] = useState('');
   const [confirming, setConfirming] = useState(false);
@@ -98,14 +107,37 @@ export function ActionsPanel({
 
   const hashValid = DEPLOY_HASH_RE.test(deployHash);
   const markDisabled = !hashValid || !!busy;
+  // When the live CSPR.click flow is wired, the real human co-sign is the
+  // headline action and the manual hash entry drops to a demo fast-forward.
+  const liveSign = typeof onSignAndSubmit === 'function';
+  const signDisabled = !walletConnected || !!busy;
 
   return (
     <div className="panel">
       <h3>
         Actions <span className="sub">gated · {state}</span>
       </h3>
+
+      {liveSign ? (
+        <div className="sign-block">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={signDisabled}
+            onClick={onSignAndSubmit}
+          >
+            Sign &amp; submit on testnet (wallet)
+          </button>
+          {walletConnected ? null : (
+            <span className="sign-hint">Connect a CSPR.click wallet to co-sign this transfer.</span>
+          )}
+          {signStatus ? <div className="sign-status">{signStatus}</div> : null}
+        </div>
+      ) : null}
+
       <label className="label" htmlFor="deployHash">
         Deploy hash (64-hex)
+        {liveSign ? <span className="sub"> · demo fallback</span> : null}
       </label>
       <input
         id="deployHash"
@@ -118,7 +150,7 @@ export function ActionsPanel({
       <div className="action-bar">
         <button
           type="button"
-          className="btn btn-primary"
+          className={liveSign ? 'btn btn-secondary' : 'btn btn-primary'}
           disabled={markDisabled}
           onClick={() => onMarkExecuted(deployHash)}
         >

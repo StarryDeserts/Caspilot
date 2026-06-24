@@ -48,6 +48,25 @@ export interface MarkExecutedResult {
   deployHash: string;
 }
 
+// The backend-built unsigned deploy. `headerJson` is the Deploy JSON the wallet's
+// send() signs + broadcasts verbatim; the two hashes are for display/verification.
+export interface UnsignedDeployEnvelope {
+  headerJson: unknown;
+  bodyHashHex: string;
+  payloadHex: string;
+}
+
+export interface BuildUnsignedDeployResult {
+  envelope: UnsignedDeployEnvelope;
+}
+
+export interface ConfirmOnchainResult {
+  id: string;
+  state: string;
+  deployHash: string;
+  alreadyConfirmed?: boolean;
+}
+
 // A debit against a vault's day cap: a reserved (held) or committed (executed)
 // spend. A released hold is NOT a debit — the server omits it.
 export interface RecentDebit {
@@ -140,6 +159,41 @@ export class CaspilotApi {
     );
     if (!res.ok) throw await this.error('markExecuted', res);
     return (await res.json()) as MarkExecutedResult;
+  }
+
+  // Build the unsigned CEP-18 transfer for this intent with the user's wallet pubkey
+  // as the deploy account (the user signs + pays). Pure CPU on the server — no state
+  // change, no signing. The returned envelope.headerJson is handed straight to the
+  // wallet's send(). A 422 (defense-in-depth policy re-check) is surfaced as a throw
+  // whose message carries the structured code.
+  async buildUnsignedDeploy(id: string, signerPk: string): Promise<BuildUnsignedDeployResult> {
+    const res = await this.fetcher(
+      `${this.baseUrl}/intents/${encodeURIComponent(id)}/build-unsigned-deploy`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ signerPk }),
+      },
+    );
+    if (!res.ok) throw await this.error('buildUnsignedDeploy', res);
+    return (await res.json()) as BuildUnsignedDeployResult;
+  }
+
+  // Record a REAL broadcast deployHash. The server independently verifies finality
+  // on-chain (info_get_deploy) and commits the reservation only on a finalized
+  // success — the client-supplied hash is never trusted. A 422 means the deploy
+  // reverted or never finalized (nothing committed).
+  async confirmOnchain(id: string, deployHash: string): Promise<ConfirmOnchainResult> {
+    const res = await this.fetcher(
+      `${this.baseUrl}/intents/${encodeURIComponent(id)}/confirm-onchain`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ deployHash }),
+      },
+    );
+    if (!res.ok) throw await this.error('confirmOnchain', res);
+    return (await res.json()) as ConfirmOnchainResult;
   }
 
   // Tolerant liveness probe for the marketing surface: never throws. A non-2xx

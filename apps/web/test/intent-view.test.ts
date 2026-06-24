@@ -82,6 +82,26 @@ describe('deriveIntent', () => {
     expect(v.deployHash).toBe('ab'.repeat(32));
   });
 
+  it('captures the chain-resolved hashKind from a V1 execution row (for the cspr.live URL kind)', () => {
+    // confirm-onchain records the verifier's chain-resolved hashKind on the EXECUTED
+    // row. A Casper 2.0 native transfer resolves as a transaction, so the view must
+    // surface deployHashKind:'transaction' to route /transaction/<hash>, not /deploy/.
+    const v1 = entry({
+      state: 'EXECUTED',
+      kind: 'execution',
+      atMs: 3,
+      payload: { deployHash: 'cd'.repeat(32), hashKind: 'transaction' },
+    });
+    const v = deriveIntent([created, validated, v1]);
+    expect(v.deployHash).toBe('cd'.repeat(32));
+    expect(v.deployHashKind).toBe('transaction');
+  });
+
+  it('leaves deployHashKind undefined when an execution row omits hashKind (legacy deploy)', () => {
+    const v = deriveIntent([created, validated, executed]);
+    expect(v.deployHashKind).toBeUndefined();
+  });
+
   it('captures rejectionCode from a denied policy_check (policy off-ramp)', () => {
     const denied = entry({
       state: 'REJECTED',
@@ -138,6 +158,28 @@ describe('buildStepper', () => {
     expect(byState.EXECUTED).toBe('current');
     expect(byState.FINALIZED).toBe('future');
     expect(steps.filter((s) => s.status === 'current')).toHaveLength(1);
+  });
+
+  it('greens a connector only when BOTH endpoints were reached (no green dangling into a skipped node)', () => {
+    // The fast-forward leaves POLICY_VALIDATED done but PAYMENT_REQUIRED never reached.
+    // A connector represents a real transition, so it is green only when both of its
+    // endpoints appear in the trace — DRAFT->POLICY_VALIDATED here. POLICY_VALIDATED's
+    // connector must NOT dangle green into the grey, never-reached PAYMENT_REQUIRED node.
+    const { steps } = buildStepper([created, validated, executed]);
+    const linkByState = Object.fromEntries(steps.map((s) => [s.state, s.linkDone]));
+    expect(linkByState.DRAFT).toBe(true); // DRAFT -> POLICY_VALIDATED, both reached
+    expect(linkByState.POLICY_VALIDATED).toBe(false); // -> PAYMENT_REQUIRED, never reached
+    expect(linkByState.ACCEPTED_BY_NODE).toBe(false); // -> EXECUTED, left side not reached
+    expect(linkByState.EXECUTED).toBe(false); // -> FINALIZED, not reached
+    expect(linkByState.FINALIZED).toBe(false); // terminal node, no connector
+  });
+
+  it('greens every connector when the full happy path was reached', () => {
+    const full = HAPPY_PATH.map((state, i) => entry({ state, kind: 'created', atMs: i + 1 }));
+    const { steps } = buildStepper(full);
+    // Every node but the last bridges to a reached neighbour, so all connectors are green.
+    for (const s of steps.slice(0, -1)) expect(s.linkDone).toBe(true);
+    expect(steps[steps.length - 1]?.linkDone).toBe(false);
   });
 
   it('on a terminal-bad off-ramp, reached nodes are done, none current, off-ramp flagged', () => {

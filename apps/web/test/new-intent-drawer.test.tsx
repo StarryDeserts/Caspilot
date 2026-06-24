@@ -87,3 +87,58 @@ describe('NewIntentDrawer', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+// Native-CSPR mode: the value moved IS native CSPR (the wallet already holds
+// testnet CSPR), so token is fixed to 'CSPR', there is no contract package
+// (a sentinel fills the field), and the receiver is a PublicKey — not an
+// account-hash. This is the only intent shape the live CSPR.click co-sign path
+// can actually broadcast, so the drawer must be able to create it.
+const PUBKEY = `01${'c'.repeat(64)}`;
+
+describe('NewIntentDrawer — native CSPR mode', () => {
+  function toNative(utils: ReturnType<typeof setup>) {
+    fireEvent.click(screen.getByRole('button', { name: /native cspr/i }));
+    return utils;
+  }
+
+  it('defaults to CEP-18 mode (the token + contract inputs are present)', () => {
+    const { input } = setup();
+    expect(input('token')).toBeTruthy();
+    expect(input('contract')).toBeTruthy();
+  });
+
+  it('hides the token + contract inputs once native mode is selected', () => {
+    const utils = setup();
+    toNative(utils);
+    expect(utils.container.querySelector('#token')).toBeNull();
+    expect(utils.container.querySelector('#contract')).toBeNull();
+  });
+
+  it('creates a native intent: token CSPR, sentinel contract, pubkey receiver, motes amount', () => {
+    const utils = setup();
+    toNative(utils);
+    fireEvent.change(utils.input('agent'), { target: { value: HEX_A } });
+    fireEvent.change(utils.input('receiver'), { target: { value: PUBKEY } });
+    fireEvent.change(utils.input('amount'), { target: { value: '2500000000' } });
+    fireEvent.click(screen.getByRole('button', { name: /create intent/i }));
+    expect(utils.onCreate).toHaveBeenCalledWith({
+      agent: HEX_A,
+      receiver: PUBKEY,
+      contract: 'native-cspr-transfer',
+      token: 'CSPR',
+      network: 'casper:casper-test',
+      amount: '2500000000',
+    });
+  });
+
+  it('rejects an account-hash receiver in native mode (must be a public key)', () => {
+    const utils = setup();
+    toNative(utils);
+    fireEvent.change(utils.input('agent'), { target: { value: HEX_A } });
+    fireEvent.change(utils.input('receiver'), { target: { value: HEX_B } });
+    fireEvent.change(utils.input('amount'), { target: { value: '2500000000' } });
+    fireEvent.click(screen.getByRole('button', { name: /create intent/i }));
+    expect(utils.onCreate).not.toHaveBeenCalled();
+    expect(utils.container.querySelector('#f-receiver')?.className).toContain('has-err');
+  });
+});

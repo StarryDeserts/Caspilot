@@ -16,7 +16,7 @@ describe('Sidebar', () => {
     const { container } = render(<Sidebar pathname="/intents/abc123" />);
     const active = container.querySelectorAll('a.nav-item.active');
     expect(active.length).toBe(1);
-    expect(active[0].textContent).toContain('Intents');
+    expect(active[0]?.textContent).toContain('Intents');
   });
 
   it('treats /console as the Dashboard active route', () => {

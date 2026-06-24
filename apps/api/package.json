@@ -16,6 +16,7 @@
     "@caspilot/signer-guard": "workspace:*",
     "@caspilot/payment-ledger": "workspace:*",
     "@caspilot/audit-trace": "workspace:*",
+    "@caspilot/adapters": "workspace:*",
     "hono": "^4.6.3",
     "@hono/node-server": "^1.13.0",
     "zod": "^3.23.8"

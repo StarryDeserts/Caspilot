@@ -725,6 +725,9 @@ body {
   align-items: flex-start;
   overflow-x: auto;
   padding-bottom: 6px;
+  /* Clear the absolutely-positioned .panel-corner (top:12px) so the node row never
+     collides with the env/sync annotation on the right. */
+  margin-top: 14px;
 }
 .step {
   display: flex;
@@ -746,7 +749,7 @@ body {
 .step:last-of-type .connector {
   display: none;
 }
-.step.done .connector {
+.step .connector.done {
   background: var(--executed);
 }
 .step .node {
@@ -974,6 +977,43 @@ body {
   fill: none;
   flex-shrink: 0;
   margin-top: 1px;
+}
+
+/* ---------- Live co-sign (CSPR.click wallet) ----------
+   The headline action when the live flow is wired: a real wallet popup that
+   signs + pays a casper-test transfer. Sits above the demo hash fallback,
+   divided by a hairline so the human co-sign reads as the primary path. */
+.sign-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--hairline);
+}
+.sign-hint {
+  font-family: var(--mono), monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.sign-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono), monospace;
+  font-size: 12px;
+  color: var(--accent);
+}
+.sign-status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  flex-shrink: 0;
+  animation: pulse 2s ease-out infinite;
 }
 
 /* ---------- x402 payment card ---------- */

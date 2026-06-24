@@ -20,7 +20,7 @@ describe('mapHealth', () => {
 
 describe('CaspilotApi.health', () => {
   it('GETs /healthz and reports reachable + httpStatus on 200', async () => {
-    const fetchMock = vi.fn(async () => new Response('ok', { status: 200 }));
+    const fetchMock = vi.fn(async (_url: string) => new Response('ok', { status: 200 }));
     const api = new CaspilotApi({
       baseUrl: 'http://api.test',
       fetch: fetchMock as unknown as typeof fetch,

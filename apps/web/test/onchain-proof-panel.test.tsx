@@ -18,6 +18,23 @@ describe('OnChainProofPanel', () => {
     expect(link.getAttribute('href')).toBe(`https://testnet.cspr.live/deploy/${HASH}`);
   });
 
+  it('links the /transaction/ explorer path and labels it a transaction when kind=transaction', () => {
+    // A Casper 2.0 native transfer finalizes as a TransactionV1. Linking /deploy/<hash>
+    // for it would 404 on cspr.live — the kind (chain-resolved, from confirm-onchain)
+    // must route /transaction/<hash> and relabel the proof header accordingly.
+    const { container } = render(<OnChainProofPanel deployHash={HASH} kind="transaction" />);
+    const link = screen.getByRole('link', { name: /view on testnet/i }) as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe(`https://testnet.cspr.live/transaction/${HASH}`);
+    expect(container.querySelector('.proof-title')?.textContent).toBe('transaction');
+  });
+
+  it('defaults to the /deploy/ explorer path (legacy) when no kind is given', () => {
+    const { container } = render(<OnChainProofPanel deployHash={HASH} />);
+    const link = screen.getByRole('link', { name: /view on testnet/i }) as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe(`https://testnet.cspr.live/deploy/${HASH}`);
+    expect(container.querySelector('.proof-title')?.textContent).toBe('deploy');
+  });
+
   it('offers a copy button for the deploy hash', () => {
     render(<OnChainProofPanel deployHash={HASH} />);
     expect(screen.getByRole('button', { name: /copy/i })).toBeDefined();

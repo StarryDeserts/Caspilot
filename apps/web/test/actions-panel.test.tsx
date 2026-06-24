@@ -91,3 +91,57 @@ describe('ActionsPanel gating', () => {
     expect(mark.disabled).toBe(true);
   });
 });
+
+describe('ActionsPanel — wallet sign & submit (real on-chain)', () => {
+  it('omits the wallet button unless the flow is wired — pure-demo keeps mark-executed', () => {
+    setup('POLICY_VALIDATED'); // no onSignAndSubmit injected
+    expect(screen.queryByRole('button', { name: /submit on testnet/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /mark executed/i })).not.toBeNull();
+  });
+
+  it('renders the wallet button when wired, disabled until a wallet is connected', () => {
+    const onSignAndSubmit = vi.fn();
+    setup('POLICY_VALIDATED', { onSignAndSubmit, walletConnected: false });
+    const sign = screen.getByRole('button', {
+      name: /submit on testnet/i,
+    }) as HTMLButtonElement;
+    expect(sign.disabled).toBe(true);
+    fireEvent.click(sign);
+    expect(onSignAndSubmit).not.toHaveBeenCalled();
+  });
+
+  it('enables the wallet button once connected and fires onSignAndSubmit on click', () => {
+    const onSignAndSubmit = vi.fn();
+    setup('POLICY_VALIDATED', { onSignAndSubmit, walletConnected: true });
+    const sign = screen.getByRole('button', {
+      name: /submit on testnet/i,
+    }) as HTMLButtonElement;
+    expect(sign.disabled).toBe(false);
+    fireEvent.click(sign);
+    expect(onSignAndSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the wallet button while a submit is in flight (busy)', () => {
+    const onSignAndSubmit = vi.fn();
+    setup('POLICY_VALIDATED', { onSignAndSubmit, walletConnected: true, busy: true });
+    const sign = screen.getByRole('button', {
+      name: /submit on testnet/i,
+    }) as HTMLButtonElement;
+    expect(sign.disabled).toBe(true);
+  });
+
+  it('surfaces the live wallet status line (sent / awaiting finality / cancelled)', () => {
+    const { container } = setup('POLICY_VALIDATED', {
+      onSignAndSubmit: vi.fn(),
+      walletConnected: true,
+      signStatus: 'Broadcast — awaiting finality…',
+    });
+    expect(container.querySelector('.sign-status')?.textContent).toContain('awaiting finality');
+  });
+
+  it('still offers the demo mark-executed fallback alongside the wallet button', () => {
+    setup('POLICY_VALIDATED', { onSignAndSubmit: vi.fn(), walletConnected: true });
+    expect(screen.getByRole('button', { name: /submit on testnet/i })).not.toBeNull();
+    expect(screen.getByRole('button', { name: /mark executed/i })).not.toBeNull();
+  });
+});

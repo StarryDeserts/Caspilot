@@ -1,14 +1,26 @@
 export interface ClickAccount {
-  publicKeyHex: string;
+  publicKey: string;
 }
 
-export interface ClickSignedDeploy {
-  signatureHex: string;
+// Normalized shape of the CSPR.click SDK's SendResult. `send` signs (wallet popup)
+// AND broadcasts via CSPR.click's node proxy in one call; on success it yields the
+// real on-chain hash. A Casper 2.0 native transfer resolves as a TransactionV1 and
+// reports transactionHash (canonical, deployHash null); a legacy Deploy reports
+// deployHash (transactionHash null). They are kept DISTINCT — never cross-filled —
+// so the view can prefer the canonical hash and link the correct cspr.live URL kind.
+// A user cancel yields cancelled=true with no hash; a broadcast failure yields a
+// non-null error with no hash.
+export interface ClickSendResult {
+  deployHash: string | null;
+  transactionHash: string | null;
+  cancelled: boolean;
+  error: string | null;
+  status: string | null;
 }
 
 export interface ClickProvider {
   connect(): Promise<ClickAccount>;
-  signDeploy(input: { deployHashHex: string }): Promise<ClickSignedDeploy>;
+  send(input: { txJson: object; signerPk: string }): Promise<ClickSendResult>;
 }
 
 export class ClickWallet {
@@ -31,7 +43,8 @@ export class ClickWallet {
   connect(): Promise<ClickAccount> {
     return this.provider.connect();
   }
-  signDeploy(input: { deployHashHex: string }): Promise<ClickSignedDeploy> {
-    return this.provider.signDeploy(input);
+
+  send(input: { txJson: object; signerPk: string }): Promise<ClickSendResult> {
+    return this.provider.send(input);
   }
 }
