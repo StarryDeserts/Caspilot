@@ -209,7 +209,7 @@ caspilot/
 
 ## Demo video
 
-> 📺 **Watch the walkthrough (3m44s):** _YouTube link added on publish._
+> 📺 **Watch the walkthrough (3m44s):** **[youtu.be/cp_SQRvDwEA](https://youtu.be/cp_SQRvDwEA)**
 
 A single end-to-end take: drafting a payment intent in the console → policy validation → a **human co-sign from the CSPR.click wallet** that pays from the user's own funds → the backend **independently verifying the deploy on-chain** before recording it → the public `testnet.cspr.live` explorer showing the finalized transfer → two **on-chain rejections** (`User error: 3` / `User error: 4`) where the vault stops policy-violating payments → the full **788-test suite** running green → the open-source repo and architecture.
 
