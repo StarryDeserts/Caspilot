@@ -203,7 +203,6 @@ caspilot/
 ## Documentation
 
 - 🔗 **[On-chain proof (Tier-1)](docs/tier1-demo.md)** — the headline, block-explorer verifiable.
-- 🚀 **[Vercel deployment guide](docs/deploy-vercel.md)** — what goes on Vercel, what doesn't, and why.
 - 🎬 **[Demo-video runbook](docs/demo-recording.md)** — shot list + narration for recording the demo.
 - 🛠️ **[Engineering status log](docs/development-status.md)** — every phase, every deviation, every compat fix.
 
