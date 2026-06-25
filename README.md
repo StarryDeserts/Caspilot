@@ -21,14 +21,15 @@ Casper Agentic Buildathon 2026
 
 Caspilot's core claim — *an on-chain policy gate that stops a misbehaving agent* — is **proven on casper-test and permanently verifiable on a block explorer**. No rebuild, no trust in us. Look any hash up on [`testnet.cspr.live`](https://testnet.cspr.live):
 
-| Step | Result | Deploy hash | On-chain outcome |
+| Step | Result | Hash | On-chain outcome |
 |---|---|---|---|
 | Deploy PolicyVault | ✅ installed | [`bf555d60…5431`](https://testnet.cspr.live/deploy/bf555d60bcbb3b9375d8281f32dceb86523fd0b5103ea11f409838ab3f2d5431) | contract [`8f75ba25…d63e`](https://testnet.cspr.live/contract/8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e) |
 | `pay()` **accepted** | ✅ transfer | [`a7419aa2…2bdf5`](https://testnet.cspr.live/deploy/a7419aa2fcedff56b76fe509ecc745b9f1da0ecd5b26e0205a0241061242bdf5) | 50 tokens → allowlisted receiver |
 | `pay()` **rejected** — receiver not allowed | ⛔ reverted | [`e6801a75…cec7`](https://testnet.cspr.live/deploy/e6801a750b58bbe955240b0fef19e53ced76219be397043bb1f56e03280bcec7) | `User error: 3` (`ReceiverNotAllowed`) |
 | `pay()` **rejected** — over per-payment max | ⛔ reverted | [`c4a48997…0eea`](https://testnet.cspr.live/deploy/c4a48997dfcd7c56c2d019caaa771467f71d48d50ca85584218fb2a9327a0eea) | `User error: 4` (`AmountAboveMax`) |
+| **UI co-sign** — human signs + pays, backend-verified | ✅ finalized | [`299d1288…fe7543`](https://testnet.cspr.live/transaction/299d1288e7edfed64e1de6ca9d229834b02f2de22d75999b59a09b5403fe7543) | native CSPR transfer · `signerRole: user_cspr_click` |
 
-A genuine policy gate must do more than let a good payment through — it must **stop** the bad ones on-chain, where the agent cannot override it. Two correctly-signed, correctly-formed payments were reverted **purely because they violated policy**. That is the whole thesis, on-chain.
+A genuine policy gate must do more than let a good payment through — it must **stop** the bad ones on-chain, where the agent cannot override it. Two correctly-signed, correctly-formed payments were reverted **purely because they violated policy**. That is the whole thesis, on-chain. The last row is proof of a different kind: a real transaction a human **co-signed and paid straight from the web UI**, which the backend independently verified on-chain before recording it.
 
 Full walkthrough, trust model, and reproduce steps → **[`docs/tier1-demo.md`](docs/tier1-demo.md)**.
 
@@ -56,37 +57,41 @@ Caspilot ships this as **two product lines over one backend**:
 
 ## How it works
 
-```
-                  ┌──────────────────────────────────────────────────┐
-                  │                  apps/web (Next.js)               │
-                  │   create intent · watch redacted trace · CSPR.click signing
-                  └───────────────┬──────────────────────────────────┘
-                                  │  HTTP (NEXT_PUBLIC_CASPILOT_API_BASE)
-                                  ▼
-                  ┌──────────────────────────────────────────────────┐
-                  │                  apps/api (Hono)                  │
-                  │  intent FSM · x402 gateway · audit trace (redacted)│
-                  └───────┬───────────────────────────┬──────────────┘
-                          │                           │
-                  ┌───────▼────────┐          ┌───────▼─────────┐
-                  │  SignerGuard   │          │  Payment ledger │
-                  │ deny-by-default│          │  replay-proof   │
-                  │  spend ledger  │          │  (SQLite, WAL)  │
-                  └───────┬────────┘          └─────────────────┘
-                          │ detached signature only (key never crosses)
-                  ┌───────▼────────────────────────────────────────┐
-                  │     apps/harness  →  CasperDeployAdapter        │
-                  │     broadcast + observe on casper-test          │
-                  └───────┬────────────────────────────────────────┘
-                          ▼
-                  ┌──────────────────────────────────────────────────┐
-                  │   PolicyVault (Odra)  —  the on-chain backstop    │
-                  │   allowlists · per-payment max · daily cap ·      │
-                  │   validity window · payload-hash nonce            │
-                  └──────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    AI["🤖 AI agent<br/>reasons about yield, proposes a payment<br/><b>never holds a key</b>"]
+
+    subgraph G1["GATE 1 · off-chain — deny by default"]
+      SG["🛡️ SignerGuard<br/>reserves budget before anything is signed<br/>replay-protected spend ledger"]
+    end
+
+    subgraph SIGN["Separated signing — key never crosses to broadcast"]
+      direction LR
+      USER["👤 Human co-sign<br/>CSPR.click wallet<br/>signs AND pays"]
+      AGENT["🔑 Agent signer<br/>detached signature only"]
+    end
+
+    subgraph G2["GATE 2 · on-chain — the backstop"]
+      VAULT["⛓️ PolicyVault · Odra smart contract<br/>agent + receiver allowlists · per-payment max<br/>daily cap · validity window · payload-hash nonce"]
+    end
+
+    CHAIN{{"casper-test executes<br/>— or REVERTS on violation —"}}
+    TRACE["📝 Audit trace, redacted<br/>records what was decided, never the prompt"]
+
+    AI -->|"intent"| SG
+    SG -->|"approved → build unsigned deploy"| SIGN
+    USER --> VAULT
+    AGENT --> VAULT
+    VAULT -->|"a valid signature is necessary,<br/><b>never sufficient</b>"| CHAIN
+    SG -.->|"every step"| TRACE
+    VAULT -.-> TRACE
 ```
 
+In the codebase: **apps/web** (Next.js) creates intents and drives CSPR.click signing; **apps/api** (Hono) runs the intent FSM, the x402 gateway, and the redacted audit trace; **apps/harness** broadcasts and observes on casper-test.
+
 The agent's only path to the chain is a **detached, tagged signature** over a byte-identical deploy. The signing key is loaded by the signer and never crosses into the broadcast adapter. Even with a valid signature, the vault still has the final say.
+
+> 📄 The full one-page value proposition (for judges): **[`docs/value-proposition.md`](docs/value-proposition.md)**.
 
 ---
 

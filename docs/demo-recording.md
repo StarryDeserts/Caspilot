@@ -1,124 +1,161 @@
 # Caspilot — Demo-Video Recording Runbook
 
-A step-by-step operational flow for recording the hackathon demo. Target length **2–3 minutes**. The guiding principle: **lead with the on-chain proof** — it's the part judges can verify, and it needs nothing hosted.
+A line-by-line shooting script for the hackathon demo. Target length **2–3 minutes**.
 
-There are two tracks:
+**The spine is now the live UI co-sign** — a human signs and pays a *real* casper-test transaction, triggered from our own console, and the backend independently verifies it on-chain before recording it. The on-chain **policy rejections** (on the block explorer) are the supporting thesis act behind it. Two distinct demonstrations, one message: **a signature is necessary, but never sufficient.**
 
-- **Track A — On-chain proof + tests.** Works **today, zero code changes**. This is the mandatory, verifiable core. If you record nothing else, record this.
-- **Track B — Live web UI.** Optional polish. Requires the API's intent routes to be enabled (one wiring change — see [`deploy-vercel.md`](deploy-vercel.md#enabling-the-live-api)) and the API running (locally is fine).
+> 🔐 **On-camera safety:** never show or print the contents of `Test Account 1_secret_key.pem`. Keep it out of frame, don't `cat` it, blur any path autocomplete. Throwaway testnet key — treat it like a real one on screen. The CSPR.click app id (`csprclick-template`), the plain RPC URL, and public keys are *not* secrets; the `.pem` is.
 
-> 🔐 **On-camera safety:** never show or print the contents of `Test Account 1_secret_key.pem`. Keep it out of frame, don't `cat` it, and blur the terminal if a path autocomplete reveals more than the filename. It's a throwaway testnet key, but treat it like a real one on screen.
+> 👆 **The one step you must film in a real browser.** Act 1's wallet popup (Casper Wallet via CSPR.click) cannot be auto-recorded. The headless recorder, jsdom, SSR, and WSL2 cannot drive a wallet extension — in headless the **Sign & submit** button correctly renders *disabled* (no wallet connected). Record Act 1 live with OBS in real Chrome/Brave with the extension installed and a funded account. Everything else can be screen-captured normally.
 
 ---
 
 ## Before you hit record
 
-1. **Clean workspace.** `git status` clean; close noisy editor panels; bump terminal font size (≥ 16pt) and browser zoom for legibility.
-2. **Pre-open browser tabs** (so you're not typing URLs on camera):
-   - The vault contract: <https://testnet.cspr.live/contract/8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e>
-   - Accepted `pay()`: <https://testnet.cspr.live/deploy/a7419aa2fcedff56b76fe509ecc745b9f1da0ecd5b26e0205a0241061242bdf5>
-   - Rejected (receiver): <https://testnet.cspr.live/deploy/e6801a750b58bbe955240b0fef19e53ced76219be397043bb1f56e03280bcec7>
-   - Rejected (over max): <https://testnet.cspr.live/deploy/c4a48997dfcd7c56c2d019caaa771467f71d48d50ca85584218fb2a9327a0eea>
-   - [`docs/tier1-demo.md`](tier1-demo.md) rendered (the proof table).
-3. **Warm the test command** once off-camera so dependencies are built and the run is fast:
-   ```bash
-   pnpm install && pnpm test
-   ```
-4. **Recording tool:** OBS Studio (free) or your OS screen recorder at **1080p**. Record system audio off; narrate live or add voiceover in post.
-
----
-
-## Track A — On-chain proof + tests (zero code change)
-
-### Shot 1 — The hook (0:00–0:20)
-
-**Screen:** the README headline / proof table.
-**Say:** *"Caspilot is an autonomous DeFi agent for Casper that physically cannot run away with your money. The AI proposes payments — but an on-chain PolicyVault has the final say. And I can prove it on a block explorer, right now."*
-
-### Shot 2 — The accepted payment (0:20–0:45)
-
-**Screen:** the **accepted `pay()`** explorer tab.
-**Say:** *"Here's the agent paying an allowlisted receiver, within its limits. The vault executes a real CEP-18 transfer — 50 tokens. This is the happy path, finalized on casper-test."*
-Point out: the deploy succeeded, the transfer event.
-
-### Shot 3 — The rejections (the thesis) (0:45–1:25)
-
-**Screen:** the **rejected (receiver)** tab.
-**Say:** *"Now the same agent, correctly signed, tries to pay a receiver that is NOT on the allowlist. The vault reverts — `User error: 3`, ReceiverNotAllowed — before moving a single token."*
-
-**Screen:** the **rejected (over max)** tab.
-**Say:** *"And here it tries to exceed the per-payment cap. Reverted again — `User error: 4`, AmountAboveMax. A valid signature is necessary, but it is never sufficient. The chain is the backstop."*
-
-> These two reverts ARE the policy-enforcement demo. You don't need a UI to show rejection — the explorer is the proof.
-
-### Shot 4 — The trust model + tests (1:25–2:00)
-
-**Screen:** split or cut to the terminal; run the suite live (or show the warmed result):
-```bash
-pnpm test
-```
-**Say:** *"Under the hood: the agent never holds a key. It hands off a detached signature; a separate adapter re-validates and broadcasts. Off-chain a deny-by-default SignerGuard reserves budget before anything is signed. 428 tests cover the whole path — FSM, x402 payments, replay protection, redaction."*
-
-**Optional Shot 4b — real broadcast (advanced):** if you want to show a *fresh* on-chain run, narrate the gated live runner (casper-test only, spends test-CSPR). Command and env are in [`tier1-demo.md`](tier1-demo.md#reproduce-it-live-optional). Keep the key file out of frame.
-
-### Shot 5 — Close (2:00–2:20)
-
-**Say:** *"AI proposes; signer and vault authorize; chain executes. That's Caspilot — agent autonomy you can actually bound."*
-**Screen:** README repo URL + the proof doc.
-
----
-
-## Track B — Live web UI (optional)
-
-Adds an interactive layer between Shot 3 and Shot 4. **Prerequisite:** enable the API intent routes (one change in `apps/api/src/index.ts`, see [`deploy-vercel.md`](deploy-vercel.md#enabling-the-live-api)). Then:
-
-### Setup (off-camera)
+### Servers + live mode
 
 ```bash
-pnpm --filter api dev     # terminal 1 → http://localhost:8787
-pnpm --filter web dev     # terminal 2 → http://localhost:3001
+# API in native + live-co-sign mode (prints "live on-chain co-sign enabled" on boot)
+CASPILOT_NODE_RPC_URL=https://node.testnet.casper.network/rpc \
+CASPILOT_NATIVE_RECEIVER=<a DIFFERENT account you control> \
+CASPILOT_DB_PATH=:memory: PORT=8787 pnpm --filter caspilot-api dev   # → :8787
+
+pnpm --filter caspilot-web dev                                        # → :3001
 ```
 
-Confirm `curl -s localhost:8787/intents -X POST -H 'content-type: application/json' -d '{...}'` returns `201` before recording. If the web build needs the API base, it defaults to `http://localhost:8787`, so no env is required locally.
+- **Funded wallet:** the signing account needs testnet CSPR for **gas + the transfer amount**. Keep the default amount tiny.
+- **Two distinct accounts in one wallet.** Casper forbids a self-transfer (`sender == receiver` → "Invalid purse" / `EqualSourceAndTarget`); the backend also rejects it at build time (`422 self_transfer_forbidden`). Set `CASPILOT_NATIVE_RECEIVER` to a *second* account you hold.
+- **Native CSPR, by design.** The live co-sign moves native CSPR, not CEP-18 — the demo CEP-18 package isn't installed on-chain (`-32008 no such package`). The CEP-18 path is the *separately-sealed Tier-1 vault proof* (Act 2), not this one. Don't conflate them on camera.
 
-### Web shot list
+### Clean stage
 
-1. **`/` landing** — *"Two product lines over one backend: an x402-paid agent API, and the delegated PolicyVault."* (~5s)
-2. **`/intents`** — fill the **Intent** form. All address fields are account hashes in `00<64-hex>` form; amount is a decimal string. Click **Create intent** → a `DRAFT` badge + intent id appears. *"The agent drafts an intent — no key, no funds moved yet."* (~20s)
-3. **`/intents/<id>`** — open the detail page; the **audit trace** polls every 2 seconds. *"This is an audit trace, not the model's chain-of-thought — reasoning and prompts are redacted before they're ever persisted, and again on export."* Point at the redacted payloads. (~20s)
-4. **`/vaults`** — fill the **PolicyVault** form; click **Create** to draft the deploy payload (shown as JSON). *"Drafting a vault deploy. The user signs this with CSPR.click — the backend never sees a private key."* (~15s)
-
-> Honest scope note: `validate-policy` and `reject` exist in the API and the API client, but are exercised by the test suite rather than wired to buttons in these pages. Keep the UI narration to **create → trace → draft vault**, and let the **explorer** (Track A) carry the accept/reject story. Don't click buttons that aren't there on camera.
+1. **Clean workspace.** Close noisy panels; terminal font ≥ 16pt; browser zoom up for legibility.
+2. **Pre-open explorer tabs** (so you're not typing URLs on camera):
+   - Vault contract — <https://testnet.cspr.live/contract/8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e>
+   - `pay()` **accepted** — <https://testnet.cspr.live/deploy/a7419aa2fcedff56b76fe509ecc745b9f1da0ecd5b26e0205a0241061242bdf5>
+   - `pay()` **rejected — receiver** — <https://testnet.cspr.live/deploy/e6801a750b58bbe955240b0fef19e53ced76219be397043bb1f56e03280bcec7>
+   - `pay()` **rejected — over max** — <https://testnet.cspr.live/deploy/c4a48997dfcd7c56c2d019caaa771467f71d48d50ca85584218fb2a9327a0eea>
+3. **Warm the tests** off-camera so the green summary is instant: `pnpm install && pnpm -r test`.
+4. **Recording tool:** OBS Studio at **1080p**. Narrate live or add voiceover in post.
 
 ---
 
-## Recommended final cut (≈ 2.5 min)
+## The script (≈ 2:45, line by line)
 
-```
-0:00  Hook (README proof table)
-0:20  Accepted pay() on cspr.live
-0:45  Rejected ×2 on cspr.live   ← the thesis
-1:15  [Track B] web: create intent → audit trace → draft vault   (optional, ~45s)
-1:25/2:00  Trust model + pnpm test (428 green)
-2:20  Close + repo link
-```
+Timecodes are cumulative targets. **Say** lines are the exact 台词 — read them as voiceover; each sentence is one beat.
 
-If you're tight on time or haven't wired the API, **drop Track B** — Track A alone is a complete, verifiable demo.
+### Act 0 — The problem (0:00 – 0:18)
+
+**Screen:** the `/` landing page (or the README headline).
+
+**Say:**
+> "An AI agent that manages money needs a key — and a key is unbounded authority."
+> "If the model is wrong, jailbroken, or just hallucinates a recipient, nothing normally stops it."
+> "Caspilot's answer: the agent only *proposes*. A human and the chain *authorize*. Let me show you — live."
+
+---
+
+### Act 1 — The live co-sign · THE SPINE (0:18 – 1:28)
+
+> 🎥 Film this whole act live in a real browser. This is the part judges haven't seen elsewhere.
+
+**1a — Create + validate (0:18 – 0:38)**
+
+**Screen:** `/intents` → fill the intent form → **Create intent** (`DRAFT` badge + id) → validate → `POLICY_VALIDATED`.
+
+**Say:**
+> "This is the console. I'll create a payment intent — a real transfer on Casper testnet."
+> "The agent drafts it. No key, no funds moved yet."
+> "Policy validation runs, and the intent reaches POLICY_VALIDATED — approved off-chain, but nothing is signed."
+
+**1b — Sign & submit → wallet popup (0:38 – 1:05)**
+
+**Screen:** `/intents/<id>` detail → click **Sign & submit on testnet (wallet)** → 👆 **Casper Wallet popup** appears.
+**Action:** review the transaction in the wallet, then **Approve**.
+
+**Say:**
+> "Now the differentiator. I click *Sign and submit*."
+> "This pops my own browser wallet, through CSPR.click."
+> "I'm the human in the loop — I review the transaction, and I approve it, paying from *my* account, not the agent's."
+> "The agent never held the key to do this on its own."
+
+**1c — Independent on-chain verify → EXECUTED → proof (1:05 – 1:28)**
+
+**Screen:** the trace advances `SIGNED → … → EXECUTED`; the proof block shows the **real** deployHash; click **View on testnet.cspr.live**.
+
+**Say:**
+> "CSPR.click broadcasts it. Now watch the backend."
+> "It does *not* trust my word that it worked — it independently polls the chain for finality."
+> "Only once the network confirms does it record EXECUTED. There's the real transaction hash, tagged *human co-sign*."
+> "One click opens it on the public explorer — finalized, verifiable, and triggered from this UI."
+
+> ⚠️ **Click only the real co-sign intent's hash.** Seeded demo intents that show `EXECUTED` carry *synthetic* hashes for UI legibility — never click "View on testnet" for those on camera. Record a *fresh* intent you just co-signed (its hash resolves), or fall back to the prior sealed run below.
+>
+> **Fallback if you can't film the popup:** show the already-sealed real co-sign on the explorer — tx [`299d1288…fe7543`](https://testnet.cspr.live/transaction/299d1288e7edfed64e1de6ca9d229834b02f2de22d75999b59a09b5403fe7543) (`signerRole: user_cspr_click`, `approval: human_cosign`) — and narrate 1a–1c over the static UI. Say plainly you're showing a run you recorded earlier; don't imply the popup is happening now.
+
+---
+
+### Act 2 — The thesis: on-chain rejections (1:28 – 2:05)
+
+**Screen:** the pre-opened **rejected (receiver)** then **rejected (over max)** explorer tabs.
+
+**Say:**
+> "But a human won't be in the loop for *every* payment. So the agent's autonomous path has an on-chain backstop — the PolicyVault."
+> "Here's the same agent, correctly signed, paying a receiver that's not on the allowlist. The vault reverts — User error 3, ReceiverNotAllowed."
+> "And here, trying to exceed the per-payment cap — reverted again. User error 4, AmountAboveMax."
+> "Two valid signatures. Both stopped on-chain, purely for breaking policy. A signature is necessary — but never sufficient."
+
+> The per-payment cap and daily cap shown are config values chosen for legibility; the reserve/commit ledger enforcing them is real.
+
+---
+
+### Act 3 — Trust model + tests (2:05 – 2:35)
+
+**Screen:** cut to the terminal; show the warmed `pnpm -r test` green summary. Optionally glance at the redacted audit trace.
+
+**Say:**
+> "Under the hood, the agent never holds a key — it hands off a detached signature, and a separate adapter broadcasts."
+> "Off-chain, a deny-by-default SignerGuard reserves budget before anything is signed."
+> "Every decision is written to a redacted audit trace — what was decided, never the prompt or the model's reasoning."
+> "Four hundred and twenty-eight tests cover the whole path."
+
+---
+
+### Act 4 — Close (2:35 – 2:48)
+
+**Screen:** the repo URL + the value-proposition trust diagram (`docs/value-proposition.md`).
+
+**Say:**
+> "AI proposes; a human and the vault authorize; the chain executes."
+> "That's Caspilot — agent autonomy you can actually bound."
+> "The code and every on-chain proof are in the repo."
+
+---
+
+## Honesty guardrails (read before publishing)
+
+- **Two separate proofs, one thesis.** Act 1 (native-CSPR human co-sign, UI-triggered, backend-verified) and Act 2 (CEP-18 PolicyVault on-chain enforcement) are *distinct* demonstrations. Don't say or imply the Act 1 transfer passed through the vault.
+- **Only real hashes get clicked.** The live co-sign hash and the four Tier-1 deploy hashes resolve on cspr.live. Seeded `EXECUTED` demo intents do not — keep them off the explorer.
+- **The popup is live or it's labeled.** Either film the real wallet approval, or explicitly narrate the fallback as a prior recorded run.
+- **Stepper honesty.** After a native/fast-forward co-sign, the intermediate FSM states (`PAYMENT_REQUIRED … ACCEPTED_BY_NODE`) stay grey by design — don't claim those were individually hit.
+- **No secrets on screen.** No `cat` of the `.pem`; double-check the final render for any `.env` or key-path reveal.
 
 ---
 
 ## Post-production & publishing
 
-- **Captions/lower-thirds** for the two error codes (`User error: 3 → ReceiverNotAllowed`, `User error: 4 → AmountAboveMax`) — they're the punchline; make them legible.
-- **Trim dead air** around the `pnpm test` run (or pre-warm and show the green summary).
+- **Captions/lower-thirds** for the two error codes (`User error: 3 → ReceiverNotAllowed`, `User error: 4 → AmountAboveMax`) and for the **real deployHash** in Act 1 — they're the punchlines; make them legible.
+- **Trim dead air** around the wallet approval (the popup round-trip) and the `pnpm test` run.
 - Export 1080p, upload (YouTube unlisted / Loom), then **paste the link into the README** under "Demo video" and into the hackathon submission.
-- Double-check the final render for any accidental reveal of the PEM file path/contents or a `.env`.
+- Final-render check for any accidental PEM/`.env` reveal.
 
 ## Pre-flight checklist
 
-- [ ] Explorer tabs pre-opened; README proof table rendered.
-- [ ] `pnpm test` warmed and green.
-- [ ] (Track B) API routes wired + `api dev` and `web dev` running; `201` on `POST /intents` confirmed.
-- [ ] Key file (`*_secret_key.pem`) out of frame; no `cat`/print of secrets.
-- [ ] Terminal/browser font sizes legible at 1080p.
-- [ ] Narration matches what's on screen (no claiming UI buttons that aren't wired).
+- [ ] API booted in **native + live-co-sign** mode (saw "live on-chain co-sign enabled"); `web dev` + `api dev` up; `POST /intents` returns `201`.
+- [ ] Real browser (Chrome/Brave) with **Casper Wallet** installed, on `casper-test`, **funded** (gas + amount), with a **second** receiver account set in `CASPILOT_NATIVE_RECEIVER`.
+- [ ] A fresh intent created live and walked to `POLICY_VALIDATED` so **Sign & submit** is enabled.
+- [ ] Explorer tabs pre-opened (vault contract + accepted + 2 rejections).
+- [ ] `pnpm -r test` warmed and green (428).
+- [ ] Key file out of frame; no `cat`/print of secrets; app id / RPC / public keys are fine to show.
+- [ ] Narration matches what's on screen; the popup is filmed live (or the fallback is labeled).
+- [ ] Terminal/browser fonts legible at 1080p.
