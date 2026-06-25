@@ -8,10 +8,12 @@
 
 [![network](https://img.shields.io/badge/network-casper--test-blue)](https://testnet.cspr.live)
 [![tier-1](https://img.shields.io/badge/Tier--1%20on--chain%20proof-verified-success)](docs/tier1-demo.md)
-[![tests](https://img.shields.io/badge/tests-428%20green-success)](#verify-it-yourself)
+[![tests](https://img.shields.io/badge/tests-788%20green-success)](#quickstart)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey)](#license)
 
-Casper Agentic Buildathon 2026
+Casper Agentic Buildathon 2026 · Casper Innovation Track
+
+📺 **[Demo video](#demo-video)** &nbsp;·&nbsp; 🔗 **[On-chain proof](#the-headline-this-is-real-and-you-can-check-it-yourself)** &nbsp;·&nbsp; 🛡️ **[Security model](#security-model)** &nbsp;·&nbsp; ⚡ **[Quickstart](#quickstart)**
 
 </div>
 
@@ -101,13 +103,13 @@ The agent's only path to the chain is a **detached, tagged signature** over a by
 |---|---|
 | Smart contract | **Odra 2.0** (Rust → WASM), CEP-18 token transfers |
 | Backend API | **Hono** + `@hono/node-server`, TypeScript (strict, NodeNext) |
-| Web | **Next.js 14** App Router, React 18, Tailwind |
+| Web | **Next.js 14** App Router, React 18, a hand-rolled `design-system.css` (no Tailwind) |
 | Payments | **x402** protocol (verify/settle/supported wire schemas, `PAYMENT-SIGNATURE` codec) |
 | Ledgers | **SQLite** via better-sqlite3 (WAL), `UNIQUE` replay constraints |
 | Chain access | casper-js-sdk against a **casper-2.0 (Condor)** testnet node |
 | Monorepo | pnpm workspace · vitest · biome · GitHub Actions CI |
 
-**428 automated tests** across 12 workspaces, plus a Rust contract suite and a gated real-broadcast live runner.
+**788 automated tests** across 12 workspaces, plus a Rust contract suite and a gated real-broadcast live runner.
 
 ---
 
@@ -118,7 +120,7 @@ The agent's only path to the chain is a **detached, tagged signature** over a by
 ```bash
 pnpm install          # installs the workspace (better-sqlite3 builds natively)
 pnpm typecheck        # strict TS across every package
-pnpm test             # 428 tests (the 2 real-broadcast tests self-skip)
+pnpm test             # 788 tests (the 2 real-broadcast tests self-skip)
 ```
 
 ### Verify the contract logic
@@ -194,6 +196,8 @@ caspilot/
 - ⏭️ **Reservation sweeper** — wire `releaseExpired()` to a background job so abandoned reservations free budget.
 - ⏭️ **Tier-2/3** — multi-step yield strategies, more adapters, mainnet hardening.
 
+**Where this goes.** The primitive Caspilot proves — *an autonomous agent whose authority is bounded by an on-chain policy it cannot override* — is the missing trust layer for the agent economy. The same SignerGuard + PolicyVault pattern generalizes directly to the buildathon's DeFi and RWA themes: autonomous treasury management, policy-gated RWA settlement, and machine-to-machine commerce where agents transact continuously but can never exceed the rules their owner deposited on-chain.
+
 ---
 
 ## Documentation
@@ -205,9 +209,10 @@ caspilot/
 
 ## Demo video
 
-<!-- Add the recorded demo link here once published -->
-_Link to be added — see [`docs/demo-recording.md`](docs/demo-recording.md) for the recording runbook._
+> 📺 **Watch the walkthrough (3m44s):** _YouTube link added on publish._
+
+A single end-to-end take: drafting a payment intent in the console → policy validation → a **human co-sign from the CSPR.click wallet** that pays from the user's own funds → the backend **independently verifying the deploy on-chain** before recording it → the public `testnet.cspr.live` explorer showing the finalized transfer → two **on-chain rejections** (`User error: 3` / `User error: 4`) where the vault stops policy-violating payments → the full **788-test suite** running green → the open-source repo and architecture.
 
 ## License
 
-MIT — see `LICENSE`. _(Add a `LICENSE` file if one is not yet present.)_
+MIT — see [`LICENSE`](LICENSE). Open-source and public, as required by the buildathon.

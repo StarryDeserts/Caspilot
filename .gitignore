@@ -18,3 +18,12 @@ data/
 .vitest/
 coverage/
 Test Account 1_secret_key.pem
+
+# Working artifacts kept out of the public submission tree
+docs/
+uiux-design/
+demo/
+
+# Demo media (the demo lives on the published video, not in the repo)
+*.mp4
+intents_detail_page_screenshot.png
