@@ -5,7 +5,9 @@ import type { RecentDebit } from '../src/lib/api.js';
 
 const NOW = Date.parse('2026-06-17T12:00:00Z');
 
-function debit(over: Partial<RecentDebit> & Pick<RecentDebit, 'amount' | 'status' | 'intentId'>): RecentDebit {
+function debit(
+  over: Partial<RecentDebit> & Pick<RecentDebit, 'amount' | 'status' | 'intentId'>,
+): RecentDebit {
   return { traceId: 'trace', atMs: NOW, ...over };
 }
 
@@ -78,7 +80,13 @@ describe('SpendMeter', () => {
 
   it('escalates to crit color at >=90% used', () => {
     render(
-      <SpendMeter usedAtomic="95000" capAtomic="100000" singleAtomic="500" debits={[]} nowMs={NOW} />,
+      <SpendMeter
+        usedAtomic="95000"
+        capAtomic="100000"
+        singleAtomic="500"
+        debits={[]}
+        nowMs={NOW}
+      />,
     );
     expect(screen.getByText('95% used').className).toMatch(/crit/);
   });

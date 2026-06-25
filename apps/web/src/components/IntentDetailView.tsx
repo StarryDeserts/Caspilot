@@ -174,9 +174,7 @@ export function IntentDetailView({
                 onValidate={onValidate}
                 onMarkExecuted={onMarkExecuted}
                 onReject={onReject}
-                {...(wallet
-                  ? { onSignAndSubmit, walletConnected: !!account, signStatus }
-                  : {})}
+                {...(wallet ? { onSignAndSubmit, walletConnected: !!account, signStatus } : {})}
               />
               <X402PaymentPanel
                 state={view.state}

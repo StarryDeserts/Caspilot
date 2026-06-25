@@ -382,8 +382,8 @@ body {
   border: 1px solid transparent;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 160ms var(--ease), box-shadow 160ms var(--ease),
-    opacity 160ms var(--ease), border-color 160ms var(--ease);
+  transition: background 160ms var(--ease), box-shadow 160ms var(--ease), opacity 160ms var(--ease),
+    border-color 160ms var(--ease);
 }
 .btn-primary {
   background: var(--accent);
@@ -1957,8 +1957,7 @@ td.muted {
 }
 .landing.reveal-armed [data-reveal] {
   opacity: 0;
-  transition: opacity 600ms var(--ease), transform 200ms var(--ease),
-    border-color 200ms var(--ease);
+  transition: opacity 600ms var(--ease), transform 200ms var(--ease), border-color 200ms var(--ease);
 }
 .landing.reveal-armed [data-reveal].in {
   opacity: 1;
@@ -2007,11 +2006,7 @@ td.muted {
   width: 560px;
   height: 320px;
   transform: translateX(-50%);
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 90, 31, 0.14),
-    rgba(255, 90, 31, 0) 68%
-  );
+  background: radial-gradient(ellipse at center, rgba(255, 90, 31, 0.14), rgba(255, 90, 31, 0) 68%);
   filter: blur(26px);
   pointer-events: none;
   z-index: 1;
@@ -2024,11 +2019,7 @@ td.muted {
   width: 240px;
   height: 120px;
   transform: translate(-50%, -50%);
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 90, 31, 0.28),
-    rgba(255, 90, 31, 0) 70%
-  );
+  background: radial-gradient(ellipse at center, rgba(255, 90, 31, 0.28), rgba(255, 90, 31, 0) 70%);
   filter: blur(14px);
   animation: glowPulse 2s ease-in-out infinite;
 }
@@ -2469,11 +2460,7 @@ td.muted {
   width: 420px;
   height: 220px;
   transform: translate(-50%, -50%);
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 90, 31, 0.14),
-    rgba(255, 90, 31, 0) 70%
-  );
+  background: radial-gradient(ellipse at center, rgba(255, 90, 31, 0.14), rgba(255, 90, 31, 0) 70%);
   filter: blur(20px);
   pointer-events: none;
 }
@@ -3349,10 +3336,8 @@ td.muted {
   background: var(--surface);
   padding: 18px 18px 16px;
   cursor: pointer;
-  transition:
-    background 0.14s var(--ease),
-    border-color 0.14s var(--ease),
-    transform 0.14s var(--ease);
+  transition: background 0.14s var(--ease), border-color 0.14s var(--ease), transform 0.14s
+    var(--ease);
 }
 .vault-card:hover {
   background: var(--surface-2);
@@ -3667,7 +3652,7 @@ td.muted {
   color: var(--text-muted);
 }
 .sig-tag.dev::before {
-  content: '';
+  content: "";
   width: 5px;
   height: 5px;
   border-radius: 50%;

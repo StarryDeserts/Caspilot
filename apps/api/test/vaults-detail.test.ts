@@ -71,7 +71,10 @@ describe('GET /vaults/:id', () => {
     // Two debits (released 100 excluded). createdAt can tie under a real clock,
     // so compare as a set keyed by amount; #6's unit test pins newest-first order.
     const byAmount = [...body.recentDebits].sort((a, b) => Number(a.amount) - Number(b.amount));
-    expect(byAmount.map((d) => `${d.amount}:${d.status}`)).toEqual(['300:reserved', '500:committed']);
+    expect(byAmount.map((d) => `${d.amount}:${d.status}`)).toEqual([
+      '300:reserved',
+      '500:committed',
+    ]);
   });
 
   it('returns 404 for an unknown vault id', async () => {

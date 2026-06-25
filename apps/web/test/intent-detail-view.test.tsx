@@ -64,7 +64,11 @@ function fakeApi(over: Partial<IntentDetailApi> = {}): IntentDetailApi {
     })),
     reject: vi.fn(async () => ({ id: ID, state: 'REJECTED' })),
     buildUnsignedDeploy: vi.fn(async () => ({
-      envelope: { headerJson: HEADER_JSON, bodyHashHex: 'bb'.repeat(16), payloadHex: 'cc'.repeat(8) },
+      envelope: {
+        headerJson: HEADER_JSON,
+        bodyHashHex: 'bb'.repeat(16),
+        payloadHex: 'cc'.repeat(8),
+      },
     })),
     confirmOnchain: vi.fn(async (_id: string, deployHash: string) => ({
       id: ID,

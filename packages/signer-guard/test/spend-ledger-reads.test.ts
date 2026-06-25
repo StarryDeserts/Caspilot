@@ -86,7 +86,18 @@ describe('SpendLedger read projections (usedOnDay / listForSigner)', () => {
             (id, signer_role, signer_pk, token, day_utc, amount, status, intent_id, trace_id, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, 'reserved', ?, ?, ?, ?)`,
         )
-        .run('corrupt', 'local_dev', SIGNER_PK, TOKEN, DAY, '', 'corrupt-intent', 'corrupt-trace', now, now);
+        .run(
+          'corrupt',
+          'local_dev',
+          SIGNER_PK,
+          TOKEN,
+          DAY,
+          '',
+          'corrupt-intent',
+          'corrupt-trace',
+          now,
+          now,
+        );
       expect(() => ledger.usedOnDay({ ...scope, dayUtc: DAY })).toThrow(TypeError);
     });
   });
@@ -111,12 +122,18 @@ describe('SpendLedger read projections (usedOnDay / listForSigner)', () => {
 
     it('includes reserved and committed but not released, preserving status', async () => {
       now = 1000;
-      const a = await ledger.reserve(reservation({ amount: '100', intentId: 'committed' }), '100000');
+      const a = await ledger.reserve(
+        reservation({ amount: '100', intentId: 'committed' }),
+        '100000',
+      );
       if (a.ok) await ledger.commit(a.reservationId);
       now = 2000;
       await ledger.reserve(reservation({ amount: '200', intentId: 'reserved' }), '100000');
       now = 3000;
-      const c = await ledger.reserve(reservation({ amount: '300', intentId: 'released' }), '100000');
+      const c = await ledger.reserve(
+        reservation({ amount: '300', intentId: 'released' }),
+        '100000',
+      );
       if (c.ok) await ledger.release(c.reservationId);
 
       const rows = ledger.listForSigner({ ...scope, limit: 10 });

@@ -114,8 +114,8 @@ export function LandingView({ probe }: LandingViewProps) {
               <div className="mstep">02 · AUTHORIZE</div>
               <h3>Authorize</h3>
               <p>
-                A SignerGuard policy checks caps and allowlist before anything signs. The agent never
-                holds keys.
+                A SignerGuard policy checks caps and allowlist before anything signs. The agent
+                never holds keys.
               </p>
               <div className="intent-chip">
                 <span className="k">policy</span>caps · allowlist

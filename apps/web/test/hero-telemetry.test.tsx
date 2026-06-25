@@ -17,9 +17,7 @@ describe('HeroTelemetry', () => {
   });
 
   it('reflects an unreachable API honestly as down — never a fabricated value', async () => {
-    const { container } = render(
-      <HeroTelemetry probe={async () => ({ reachable: false })} />,
-    );
+    const { container } = render(<HeroTelemetry probe={async () => ({ reachable: false })} />);
     expect(await screen.findByText('unreachable')).toBeDefined();
     expect(container.querySelector('.health-dot.down')).not.toBeNull();
   });

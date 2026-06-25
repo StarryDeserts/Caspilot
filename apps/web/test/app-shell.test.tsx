@@ -39,7 +39,7 @@ function fakeProvider(over: Partial<ClickProvider> = {}): ClickProvider {
 // AppShell calls useWallet(), so it must render inside a WalletProvider — the same
 // way the real app group layout mounts it. Tests inject a fake ClickProvider.
 function renderShell(ui: ReactNode, provider: ClickProvider = fakeProvider()) {
-  return render(<WalletProvider provider={provider}>{ui}</WalletProvider> as ReactElement);
+  return render((<WalletProvider provider={provider}>{ui}</WalletProvider>) as ReactElement);
 }
 
 describe('Topbar', () => {

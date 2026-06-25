@@ -36,7 +36,9 @@ describe('DevelopersView', () => {
     const { container, getByText, getAllByText } = render(<DevelopersView />);
     expect(container.querySelector('.req-line')).toBeTruthy();
     // full-length values, not "00aa…" / "int_3hdp2en…" ellipses
-    expect(getByText('00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toBeTruthy();
+    expect(
+      getByText('00aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
+    ).toBeTruthy();
     expect(getAllByText('int_3hdp2enbaqglke1jv7e1avk3d9').length).toBeGreaterThan(0);
     // copy affordances on the code blocks
     const copies = container.querySelectorAll('.copy-btn');

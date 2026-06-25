@@ -1,7 +1,12 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { deployAccountFromEnvelope } from '@caspilot/adapters';
 import { buildApp } from '../src/server.js';
-import { buildApiDeps, nativeDemoPolicy, NATIVE_SENTINEL_PACKAGE, type ApiDeps } from '../src/deps.js';
+import {
+  buildApiDeps,
+  nativeDemoPolicy,
+  NATIVE_SENTINEL_PACKAGE,
+  type ApiDeps,
+} from '../src/deps.js';
 import type { DeployReader } from '../src/intents/router.js';
 
 // The live browser co-sign demo moves NATIVE CSPR: the user's wallet already

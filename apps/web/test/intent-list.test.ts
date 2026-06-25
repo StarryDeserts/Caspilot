@@ -150,7 +150,13 @@ describe('sortByUpdatedDesc', () => {
 
 describe('FILTERS', () => {
   it('lists the five segments in display order with labels', () => {
-    expect(FILTERS.map((f) => f.key)).toEqual(['all', 'draft', 'validated', 'executed', 'rejected']);
+    expect(FILTERS.map((f) => f.key)).toEqual([
+      'all',
+      'draft',
+      'validated',
+      'executed',
+      'rejected',
+    ]);
     expect(FILTERS.map((f) => f.label)).toEqual([
       'All',
       'Draft',

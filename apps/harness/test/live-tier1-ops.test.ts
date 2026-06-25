@@ -78,7 +78,9 @@ function recordingBroadcaster(opts: {
     },
     async awaitDeployFinalized(deployHash) {
       opts.awaits.push(deployHash);
-      return opts.finalize?.(deployHash) ?? { finalizedHeight: 100, success: true };
+      return (
+        opts.finalize?.(deployHash) ?? { finalizedHeight: 100, success: true, hashKind: 'deploy' }
+      );
     },
   };
 }
@@ -258,7 +260,9 @@ describe('buildLiveTier1Ops dispatch + wiring', () => {
   });
 
   it('maps an on-chain revert to success:false with the reported errorCode', async () => {
-    const h = harness({ finalize: () => ({ finalizedHeight: 200, success: false, errorCode: 4 }) });
+    const h = harness({
+      finalize: () => ({ finalizedHeight: 200, success: false, errorCode: 4, hashKind: 'deploy' }),
+    });
     const out = await h.ops.pay({ vaultPackageHash: VAULT_PKG, receiver: RECEIVER, amount: '999' });
     expect(out).toEqual({
       deployHash: 'dh:vc-pay-0',

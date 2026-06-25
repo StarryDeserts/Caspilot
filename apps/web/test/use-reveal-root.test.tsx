@@ -18,7 +18,10 @@ function Harness() {
 }
 
 function stubMatchMedia(matches: boolean) {
-  (window as unknown as { matchMedia: unknown }).matchMedia = (q: string) => ({ matches, media: q });
+  (window as unknown as { matchMedia: unknown }).matchMedia = (q: string) => ({
+    matches,
+    media: q,
+  });
 }
 
 describe('useRevealRoot', () => {

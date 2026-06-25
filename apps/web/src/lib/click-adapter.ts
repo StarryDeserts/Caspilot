@@ -73,9 +73,7 @@ export function makeClickAdapter(clickRef: ClickRefLike): ClickProvider {
       // the Casper Wallet extension directly (no provider-chooser modal needed).
       const account = clickRef.getActiveAccount() ?? (await clickRef.connect(CASPER_WALLET_KEY));
       if (!account) {
-        throw new Error(
-          'CSPR.click connect returned no account — cancelled or wallet unavailable',
-        );
+        throw new Error('CSPR.click connect returned no account — cancelled or wallet unavailable');
       }
       return { publicKey: account.public_key };
     },

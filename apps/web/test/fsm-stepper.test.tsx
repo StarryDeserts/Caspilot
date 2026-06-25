@@ -67,12 +67,16 @@ describe('FsmStepper', () => {
   it('flags the active off-ramp and leaves no step current', () => {
     const { container } = render(
       <FsmStepper
-        entries={[row('DRAFT'), row('POLICY_VALIDATED', 'policy_check'), row('REJECTED', 'rejected')]}
+        entries={[
+          row('DRAFT'),
+          row('POLICY_VALIDATED', 'policy_check'),
+          row('REJECTED', 'rejected'),
+        ]}
       />,
     );
     expect(container.querySelectorAll('.step.current')).toHaveLength(0);
-    const rejected = Array.from(container.querySelectorAll('.offramp .badge')).find(
-      (el) => el.textContent?.includes('REJECTED'),
+    const rejected = Array.from(container.querySelectorAll('.offramp .badge')).find((el) =>
+      el.textContent?.includes('REJECTED'),
     );
     expect(rejected?.className).toContain('is-active');
   });

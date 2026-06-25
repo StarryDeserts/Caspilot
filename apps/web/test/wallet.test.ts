@@ -76,7 +76,13 @@ describe('ClickWallet', () => {
   it('refuses a provider that exposes anything resembling CSPR_CLOUD_KEY', () => {
     const provider = {
       connect: async () => ({ publicKey: PK }),
-      send: async () => ({ deployHash: null, transactionHash: null, cancelled: false, error: null, status: null }),
+      send: async () => ({
+        deployHash: null,
+        transactionHash: null,
+        cancelled: false,
+        error: null,
+        status: null,
+      }),
       CSPR_CLOUD_KEY: 'leaked',
     } as unknown as ClickProvider;
     expect(() => new ClickWallet(provider)).toThrow(/CSPR_CLOUD_KEY/);
@@ -85,7 +91,13 @@ describe('ClickWallet', () => {
   it('refuses a provider that exposes a PRIVATE_KEY field', () => {
     const provider = {
       connect: async () => ({ publicKey: PK }),
-      send: async () => ({ deployHash: null, transactionHash: null, cancelled: false, error: null, status: null }),
+      send: async () => ({
+        deployHash: null,
+        transactionHash: null,
+        cancelled: false,
+        error: null,
+        status: null,
+      }),
       PRIVATE_KEY: 'leaked',
     } as unknown as ClickProvider;
     expect(() => new ClickWallet(provider)).toThrow(/PRIVATE_KEY/);

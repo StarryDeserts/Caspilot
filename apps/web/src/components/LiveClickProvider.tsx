@@ -1,7 +1,11 @@
 'use client';
 import { useRef, type ReactNode } from 'react';
 import { ClickProvider, useClickRef } from '@make-software/csprclick-ui';
-import { CONTENT_MODE, WALLET_KEYS, type CsprClickInitOptions } from '@make-software/csprclick-core-types';
+import {
+  CONTENT_MODE,
+  WALLET_KEYS,
+  type CsprClickInitOptions,
+} from '@make-software/csprclick-core-types';
 import { WalletProvider } from '../lib/wallet-context.js';
 import { makeClickAdapter, type ClickRefLike } from '../lib/click-adapter.js';
 import type { ClickProvider as ClickProviderSeam } from '../lib/wallet.js';

@@ -124,7 +124,7 @@ describe('assembleTier1LiveDeps', () => {
       return { deployHash: 'a'.repeat(64) };
     },
     async awaitDeployFinalized() {
-      return { finalizedHeight: 1, success: true };
+      return { finalizedHeight: 1, success: true, hashKind: 'deploy' };
     },
   };
   const reader: Tier1Reader = {

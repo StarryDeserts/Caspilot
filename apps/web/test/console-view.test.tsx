@@ -48,7 +48,10 @@ function statValue(label: string): string {
   return tile.querySelector('.snum')?.textContent ?? '';
 }
 
-async function renderLoaded(over: Partial<ConsoleApi> = {}, handlers: Partial<{ onOpen: () => void; onViewAll: () => void }> = {}) {
+async function renderLoaded(
+  over: Partial<ConsoleApi> = {},
+  handlers: Partial<{ onOpen: () => void; onViewAll: () => void }> = {},
+) {
   const api = fakeApi(over);
   const onOpen = handlers.onOpen ?? vi.fn();
   const onViewAll = handlers.onViewAll ?? vi.fn();
@@ -115,7 +118,9 @@ describe('ConsoleView (client render path)', () => {
         throw new Error('listIntents 503: upstream down');
       }),
     });
-    const { container } = render(<ConsoleView api={api} onOpen={vi.fn()} onViewAll={vi.fn()} now={NOW} />);
+    const { container } = render(
+      <ConsoleView api={api} onOpen={vi.fn()} onViewAll={vi.fn()} now={NOW} />,
+    );
     await screen.findByText(/listIntents 503/i);
     expect(container.querySelector('.inline-alert.show')).not.toBeNull();
   });

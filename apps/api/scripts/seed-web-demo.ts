@@ -127,7 +127,9 @@ async function main() {
     );
   }
   const failed = results.filter((r) => !r.ok);
-  console.log(`\n${results.length - failed.length}/${results.length} intents reached target state.`);
+  console.log(
+    `\n${results.length - failed.length}/${results.length} intents reached target state.`,
+  );
   if (failed.length) process.exitCode = 1;
 }
 

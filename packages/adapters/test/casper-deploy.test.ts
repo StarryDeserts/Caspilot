@@ -317,7 +317,12 @@ describe('CasperDeployAdapter.awaitDeployFinalized', () => {
 
     const out = await adapter.awaitDeployFinalized(env.bodyHashHex, { sleep: NOOP_SLEEP });
 
-    expect(out).toEqual({ finalizedHeight: 77, success: false, errorCode: 60004, hashKind: 'deploy' });
+    expect(out).toEqual({
+      finalizedHeight: 77,
+      success: false,
+      errorCode: 60004,
+      hashKind: 'deploy',
+    });
   });
 
   it('does not mislabel an incidental number in a non-User-error revert as a code', async () => {

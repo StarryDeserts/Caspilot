@@ -167,7 +167,11 @@ export function NewIntentDrawer({
           </div>
 
           {rows.map((row) => (
-            <div className={`field${errs[row.id] ? ' has-err' : ''}`} id={`f-${row.id}`} key={row.id}>
+            <div
+              className={`field${errs[row.id] ? ' has-err' : ''}`}
+              id={`f-${row.id}`}
+              key={row.id}
+            >
               <label htmlFor={row.id}>{row.label}</label>
               <input
                 id={row.id}
@@ -198,7 +202,9 @@ export function NewIntentDrawer({
           </div>
 
           <div className={`field${errs.amount ? ' has-err' : ''}`} id="f-amount">
-            <label htmlFor="amount">{isNative ? 'Amount · motes' : 'Amount · decimal string'}</label>
+            <label htmlFor="amount">
+              {isNative ? 'Amount · motes' : 'Amount · decimal string'}
+            </label>
             <input
               id="amount"
               spellCheck={false}

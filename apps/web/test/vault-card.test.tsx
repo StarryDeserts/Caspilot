@@ -32,7 +32,9 @@ describe('VaultCard', () => {
   });
 
   it('colors the meter ok well below the cap and sizes the fill to the pct', () => {
-    const { container } = render(<VaultCard vault={vault({ usedTodayAtomic: '800' })} onOpen={vi.fn()} />);
+    const { container } = render(
+      <VaultCard vault={vault({ usedTodayAtomic: '800' })} onOpen={vi.fn()} />,
+    );
     const fill = container.querySelector<HTMLElement>('.meter-fill');
     expect(fill).not.toBeNull();
     expect(fill?.classList.contains('ok')).toBe(true);

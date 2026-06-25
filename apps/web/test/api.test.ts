@@ -85,9 +85,12 @@ describe('CaspilotApi', () => {
   it('markExecuted() POSTs the deployHash to mark-executed', async () => {
     const fetchMock = vi.fn(
       async (_url: string, _init?: RequestInit) =>
-        new Response(JSON.stringify({ id: 'int_a', state: 'EXECUTED', deployHash: 'ab'.repeat(32) }), {
-          status: 200,
-        }),
+        new Response(
+          JSON.stringify({ id: 'int_a', state: 'EXECUTED', deployHash: 'ab'.repeat(32) }),
+          {
+            status: 200,
+          },
+        ),
     );
     const api = new CaspilotApi({
       baseUrl: 'http://api.test',
@@ -104,9 +107,12 @@ describe('CaspilotApi', () => {
   it('validatePolicy() returns the structured rejection on 422 instead of throwing', async () => {
     const fetchMock = vi.fn(
       async () =>
-        new Response(JSON.stringify({ id: 'int_a', state: 'REJECTED', code: 'receiver_not_allowed' }), {
-          status: 422,
-        }),
+        new Response(
+          JSON.stringify({ id: 'int_a', state: 'REJECTED', code: 'receiver_not_allowed' }),
+          {
+            status: 422,
+          },
+        ),
     );
     const api = new CaspilotApi({
       baseUrl: 'http://api.test',
@@ -119,9 +125,12 @@ describe('CaspilotApi', () => {
   it('validatePolicy() returns POLICY_VALIDATED on 200', async () => {
     const fetchMock = vi.fn(
       async () =>
-        new Response(JSON.stringify({ id: 'int_a', state: 'POLICY_VALIDATED', policyDigest: 'dig' }), {
-          status: 200,
-        }),
+        new Response(
+          JSON.stringify({ id: 'int_a', state: 'POLICY_VALIDATED', policyDigest: 'dig' }),
+          {
+            status: 200,
+          },
+        ),
     );
     const api = new CaspilotApi({
       baseUrl: 'http://api.test',
@@ -216,7 +225,8 @@ describe('CaspilotApi', () => {
       payloadHex: 'bb'.repeat(32),
     };
     const fetchMock = vi.fn(
-      async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ envelope }), { status: 200 }),
+      async (_url: string, _init?: RequestInit) =>
+        new Response(JSON.stringify({ envelope }), { status: 200 }),
     );
     const api = new CaspilotApi({
       baseUrl: 'http://api.test',

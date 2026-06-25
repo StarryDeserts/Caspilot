@@ -9,9 +9,7 @@ const HEX_C = `00${'c'.repeat(64)}`;
 function setup(over: Partial<Parameters<typeof NewIntentDrawer>[0]> = {}) {
   const onCreate = vi.fn();
   const onClose = vi.fn();
-  const utils = render(
-    <NewIntentDrawer open onClose={onClose} onCreate={onCreate} {...over} />,
-  );
+  const utils = render(<NewIntentDrawer open onClose={onClose} onCreate={onCreate} {...over} />);
   const input = (id: string) => utils.container.querySelector<HTMLInputElement>(`#${id}`)!;
   const fillValid = () => {
     fireEvent.change(input('agent'), { target: { value: HEX_A } });

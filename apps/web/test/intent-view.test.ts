@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  HAPPY_PATH,
-  OFF_RAMP,
-  deriveIntent,
-  buildStepper,
-} from '../src/lib/intent-view.js';
+import { HAPPY_PATH, OFF_RAMP, deriveIntent, buildStepper } from '../src/lib/intent-view.js';
 import type { TraceEntry } from '../src/lib/api.js';
 
 function entry(over: Partial<TraceEntry> & { state: string; kind: string }): TraceEntry {
@@ -183,7 +178,12 @@ describe('buildStepper', () => {
   });
 
   it('on a terminal-bad off-ramp, reached nodes are done, none current, off-ramp flagged', () => {
-    const rejected = entry({ state: 'REJECTED', kind: 'rejected', atMs: 3, payload: { reason: 'x' } });
+    const rejected = entry({
+      state: 'REJECTED',
+      kind: 'rejected',
+      atMs: 3,
+      payload: { reason: 'x' },
+    });
     const { steps, activeOffRamp } = buildStepper([created, validated, rejected]);
     const byState = Object.fromEntries(steps.map((s) => [s.state, s.status]));
     expect(byState.DRAFT).toBe('done');

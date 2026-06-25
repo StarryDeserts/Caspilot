@@ -21,10 +21,7 @@ function startOfUtcDay(ms: number): number {
   return Math.floor(ms / DAY_MS) * DAY_MS;
 }
 
-export function summarizeConsole(
-  intents: readonly IntentSummary[],
-  nowMs: number,
-): ConsoleSummary {
+export function summarizeConsole(intents: readonly IntentSummary[], nowMs: number): ConsoleSummary {
   const dayStart = startOfUtcDay(nowMs);
   const isToday = (ms: number) => ms >= dayStart && ms < dayStart + DAY_MS;
 

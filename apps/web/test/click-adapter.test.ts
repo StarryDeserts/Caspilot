@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { makeClickAdapter, CASPER_WALLET_KEY, type ClickRefLike } from '../src/lib/click-adapter.js';
+import {
+  makeClickAdapter,
+  CASPER_WALLET_KEY,
+  type ClickRefLike,
+} from '../src/lib/click-adapter.js';
 
 const PK = '01' + 'ab'.repeat(32);
 const HASH = 'dd'.repeat(32);
@@ -57,9 +61,7 @@ describe('makeClickAdapter — connect', () => {
   });
 
   it('throws when the provider connect resolves with no account (cancelled)', async () => {
-    const adapter = makeClickAdapter(
-      fakeClickRef({ connect: vi.fn(async () => undefined) }),
-    );
+    const adapter = makeClickAdapter(fakeClickRef({ connect: vi.fn(async () => undefined) }));
 
     await expect(adapter.connect()).rejects.toThrow(/no account/i);
   });
@@ -148,21 +150,37 @@ describe('makeClickAdapter — send', () => {
     const adapter = makeClickAdapter(
       fakeClickRef({
         send: vi.fn(async () =>
-          sentResult({ cancelled: true, deployHash: null, transactionHash: null, status: 'cancelled' }),
+          sentResult({
+            cancelled: true,
+            deployHash: null,
+            transactionHash: null,
+            status: 'cancelled',
+          }),
         ),
       }),
     );
 
     const res = await adapter.send({ txJson: TX, signerPk: PK });
 
-    expect(res).toEqual({ deployHash: null, transactionHash: null, cancelled: true, error: null, status: 'cancelled' });
+    expect(res).toEqual({
+      deployHash: null,
+      transactionHash: null,
+      cancelled: true,
+      error: null,
+      status: 'cancelled',
+    });
   });
 
   it('surfaces a broadcast error verbatim with no hash', async () => {
     const adapter = makeClickAdapter(
       fakeClickRef({
         send: vi.fn(async () =>
-          sentResult({ deployHash: null, transactionHash: null, status: null, error: 'insufficient balance' }),
+          sentResult({
+            deployHash: null,
+            transactionHash: null,
+            status: null,
+            error: 'insufficient balance',
+          }),
         ),
       }),
     );
@@ -174,9 +192,7 @@ describe('makeClickAdapter — send', () => {
   });
 
   it('treats an undefined SDK result as an honest error, never a silent success', async () => {
-    const adapter = makeClickAdapter(
-      fakeClickRef({ send: vi.fn(async () => undefined) }),
-    );
+    const adapter = makeClickAdapter(fakeClickRef({ send: vi.fn(async () => undefined) }));
 
     const res = await adapter.send({ txJson: TX, signerPk: PK });
 
@@ -185,41 +201,37 @@ describe('makeClickAdapter — send', () => {
     expect(res.error).toMatch(/no send result/i);
   });
 
-  it(
-    'hands off the moment the status callback delivers a hash, without awaiting the 120s socket',
-    async () => {
-      const TXH = 'ee'.repeat(32);
-      // The real SDK fires the `sent` callback with the broadcast hash the instant
-      // the wallet signs, THEN blocks on a CSPR.cloud streaming socket that only
-      // settles at finality or a 120s timeout. Our backend verifies finality
-      // independently (awaitDeployFinalized polls the node), so the adapter must
-      // resolve from the `sent` callback and never await that socket. Model it with
-      // a send() promise that NEVER settles: only an early hand-off can resolve.
-      const send = vi.fn(
-        (_tx: unknown, _pk: string, onStatus?: (s: string, d?: unknown) => void) =>
-          new Promise(() => {
-            onStatus?.('sent', {
-              cancelled: false,
-              deployHash: null,
-              transactionHash: TXH,
-              status: 'sent',
-              error: null,
-            });
-          }),
-      );
-      const adapter = makeClickAdapter(
-        fakeClickRef({ send: send as unknown as ClickRefLike['send'] }),
-      );
+  it('hands off the moment the status callback delivers a hash, without awaiting the 120s socket', async () => {
+    const TXH = 'ee'.repeat(32);
+    // The real SDK fires the `sent` callback with the broadcast hash the instant
+    // the wallet signs, THEN blocks on a CSPR.cloud streaming socket that only
+    // settles at finality or a 120s timeout. Our backend verifies finality
+    // independently (awaitDeployFinalized polls the node), so the adapter must
+    // resolve from the `sent` callback and never await that socket. Model it with
+    // a send() promise that NEVER settles: only an early hand-off can resolve.
+    const send = vi.fn(
+      (_tx: unknown, _pk: string, onStatus?: (s: string, d?: unknown) => void) =>
+        new Promise(() => {
+          onStatus?.('sent', {
+            cancelled: false,
+            deployHash: null,
+            transactionHash: TXH,
+            status: 'sent',
+            error: null,
+          });
+        }),
+    );
+    const adapter = makeClickAdapter(
+      fakeClickRef({ send: send as unknown as ClickRefLike['send'] }),
+    );
 
-      const res = await adapter.send({ txJson: TX, signerPk: PK });
+    const res = await adapter.send({ txJson: TX, signerPk: PK });
 
-      expect(res.transactionHash).toBe(TXH);
-      expect(res.deployHash).toBeNull();
-      expect(res.cancelled).toBe(false);
-      expect(res.status).toBe('sent');
-    },
-    1500,
-  );
+    expect(res.transactionHash).toBe(TXH);
+    expect(res.deployHash).toBeNull();
+    expect(res.cancelled).toBe(false);
+    expect(res.status).toBe('sent');
+  }, 1500);
 
   it('does NOT early-resolve on a cancelled callback — settles from the resolved promise', async () => {
     // The SDK fires a cancelled/error callback AND resolves the promise with the
@@ -235,7 +247,12 @@ describe('makeClickAdapter — send', () => {
         error: null,
       });
       return Promise.resolve(
-        sentResult({ cancelled: true, deployHash: null, transactionHash: null, status: 'cancelled' }),
+        sentResult({
+          cancelled: true,
+          deployHash: null,
+          transactionHash: null,
+          status: 'cancelled',
+        }),
       );
     });
     const adapter = makeClickAdapter(

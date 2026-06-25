@@ -403,7 +403,9 @@ export function intentsRouter(deps: IntentRouterDeps): Hono {
       // redactWithReport so the row can honestly say WHETHER reasoning/secrets
       // were stripped. The client only ever sees the post-redaction payload, so
       // this flag is the only truthful source for a "redacted" chip.
-      const report = redactor.redactWithReport(JSON.parse(row.payload_json) as Record<string, unknown>);
+      const report = redactor.redactWithReport(
+        JSON.parse(row.payload_json) as Record<string, unknown>,
+      );
       return {
         atMs: row.at_ms,
         state: row.state,

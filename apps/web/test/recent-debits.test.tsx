@@ -6,8 +6,20 @@ import type { RecentDebit } from '../src/lib/api.js';
 const NOW = 2_000_000_000_000;
 
 const DEBITS: RecentDebit[] = [
-  { amount: '500', status: 'committed', intentId: 'int_committed_1', traceId: 'trace_a', atMs: NOW - 60_000 },
-  { amount: '300', status: 'reserved', intentId: 'int_reserved_1', traceId: 'trace_b', atMs: NOW - 5_000 },
+  {
+    amount: '500',
+    status: 'committed',
+    intentId: 'int_committed_1',
+    traceId: 'trace_a',
+    atMs: NOW - 60_000,
+  },
+  {
+    amount: '300',
+    status: 'reserved',
+    intentId: 'int_reserved_1',
+    traceId: 'trace_b',
+    atMs: NOW - 5_000,
+  },
 ];
 
 describe('RecentDebits', () => {

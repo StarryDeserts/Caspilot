@@ -42,7 +42,15 @@ export function capMarkerPct(singleAtomic: string, capAtomic: string): number {
 // time than is left.
 export function resetCountdown(nowMs: number): string {
   const d = new Date(nowMs);
-  const nextMidnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 0);
+  const nextMidnight = Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate() + 1,
+    0,
+    0,
+    0,
+    0,
+  );
   const diff = Math.max(0, nextMidnight - nowMs);
   const totalMin = Math.floor(diff / 60_000);
   const h = Math.floor(totalMin / 60);

@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  KeyAlgorithm,
-  PrivateKey,
-  Transaction,
-  TransactionEntryPointEnum,
-} from 'casper-js-sdk';
+import { KeyAlgorithm, PrivateKey, Transaction, TransactionEntryPointEnum } from 'casper-js-sdk';
 import { buildNativeTransferDeploy } from '../src/deploy-builder.js';
 
 // Offline: on Casper 2.0 (Condor) a native CSPR transfer is a TransactionV1 —

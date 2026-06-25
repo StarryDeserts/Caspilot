@@ -34,7 +34,9 @@ describe('IntentsTable', () => {
   });
 
   it('exposes a right-aligned Amount header', () => {
-    const { container } = render(<IntentsTable intents={[intent()]} nowMs={NOW} onOpen={() => {}} />);
+    const { container } = render(
+      <IntentsTable intents={[intent()]} nowMs={NOW} onOpen={() => {}} />,
+    );
     const amountHeader = Array.from(container.querySelectorAll('th')).find(
       (th) => th.textContent === 'Amount',
     );
@@ -43,14 +45,18 @@ describe('IntentsTable', () => {
 
   it('navigates on full-row click', () => {
     const onOpen = vi.fn();
-    render(<IntentsTable intents={[intent({ id: 'int_click_me_1' })]} nowMs={NOW} onOpen={onOpen} />);
+    render(
+      <IntentsTable intents={[intent({ id: 'int_click_me_1' })]} nowMs={NOW} onOpen={onOpen} />,
+    );
     fireEvent.click(screen.getByRole('button', { name: /int_click_me_1/ }));
     expect(onOpen).toHaveBeenCalledWith('int_click_me_1');
   });
 
   it('navigates on Enter and on Space (keyboard accessible row)', () => {
     const onOpen = vi.fn();
-    render(<IntentsTable intents={[intent({ id: 'int_keynav_99' })]} nowMs={NOW} onOpen={onOpen} />);
+    render(
+      <IntentsTable intents={[intent({ id: 'int_keynav_99' })]} nowMs={NOW} onOpen={onOpen} />,
+    );
     const row = screen.getByRole('button', { name: /int_keynav_99/ });
 
     fireEvent.keyDown(row, { key: 'Enter' });

@@ -45,5 +45,7 @@ const app = buildApp({ env: { expectedChainspec }, deps });
 serve({ fetch: app.fetch, port });
 console.log(
   `caspilot-api listening on :${port}` +
-    (nodeRpcUrl ? ' (live on-chain co-sign enabled)' : ' (pure-demo mode — no node RPC configured)'),
+    (nodeRpcUrl
+      ? ' (live on-chain co-sign enabled)'
+      : ' (pure-demo mode — no node RPC configured)'),
 );

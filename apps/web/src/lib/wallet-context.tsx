@@ -1,6 +1,11 @@
 'use client';
 import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ClickWallet, type ClickAccount, type ClickProvider, type ClickSendResult } from './wallet.js';
+import {
+  ClickWallet,
+  type ClickAccount,
+  type ClickProvider,
+  type ClickSendResult,
+} from './wallet.js';
 
 export interface WalletContextValue {
   account: ClickAccount | null;

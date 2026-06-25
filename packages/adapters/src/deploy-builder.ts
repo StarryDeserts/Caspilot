@@ -208,7 +208,9 @@ export function buildNativeTransferDeploy(p: BuildNativeTransferParams): Unsigne
   // never succeed, so the wallet never pops and no gas is wasted. The receiver is
   // user-supplied (possibly checksummed), so compare normalized hex.
   if (p.senderPk.toLowerCase() === p.recipient.toLowerCase()) {
-    throw new Error('refusing self-transfer: recipient equals sender (would revert on-chain "Invalid purse")');
+    throw new Error(
+      'refusing self-transfer: recipient equals sender (would revert on-chain "Invalid purse")',
+    );
   }
   const builder = new NativeTransferBuilder()
     .from(PublicKey.fromHex(p.senderPk))

@@ -3,7 +3,14 @@ import { FRONTEND_FORBIDDEN_KEYS, sanitize } from '../src/lib/redact.js';
 
 describe('FRONTEND_FORBIDDEN_KEYS', () => {
   it('covers secret material and agent reasoning channels', () => {
-    for (const k of ['PRIVATE_KEY', 'privateKey', 'CSPR_CLOUD_KEY', 'reasoning', 'chainOfThought', 'prompt']) {
+    for (const k of [
+      'PRIVATE_KEY',
+      'privateKey',
+      'CSPR_CLOUD_KEY',
+      'reasoning',
+      'chainOfThought',
+      'prompt',
+    ]) {
       expect(FRONTEND_FORBIDDEN_KEYS.has(k)).toBe(true);
     }
   });

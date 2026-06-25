@@ -60,13 +60,16 @@ describe('NetworkPill', () => {
 });
 
 describe('HealthDot', () => {
-  it.each(['healthy', 'degraded', 'down'])('reflects %s status as a class + accessible name', (status) => {
-    const { container } = render(<HealthDot status={status as never} />);
-    const dot = container.querySelector('.health-dot');
-    expect(dot?.className).toContain(status);
-    expect(container.querySelector('.dot')).not.toBeNull();
-    expect(screen.getByRole('status').getAttribute('aria-label')).toContain(status);
-  });
+  it.each(['healthy', 'degraded', 'down'])(
+    'reflects %s status as a class + accessible name',
+    (status) => {
+      const { container } = render(<HealthDot status={status as never} />);
+      const dot = container.querySelector('.health-dot');
+      expect(dot?.className).toContain(status);
+      expect(container.querySelector('.dot')).not.toBeNull();
+      expect(screen.getByRole('status').getAttribute('aria-label')).toContain(status);
+    },
+  );
 });
 
 describe('WalletButton', () => {

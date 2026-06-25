@@ -70,14 +70,14 @@ function fakeSigner(signCount: { n: number }): RawSigner {
  */
 function scriptedBroadcaster(submits: { n: number }): Tier1Broadcaster {
   const finals: DeployFinalization[] = [
-    { finalizedHeight: 10, success: true }, // installCep18
-    { finalizedHeight: 11, success: true }, // installVault
-    { finalizedHeight: 12, success: true }, // allowAgent
-    { finalizedHeight: 13, success: true }, // allowReceiver
-    { finalizedHeight: 14, success: true }, // fundVault
-    { finalizedHeight: 20, success: true }, // accepted pay
-    { finalizedHeight: 21, success: false, errorCode: 3 }, // receiver_not_allowed
-    { finalizedHeight: 22, success: false, errorCode: 4 }, // over_max_single_payment
+    { finalizedHeight: 10, success: true, hashKind: 'deploy' }, // installCep18
+    { finalizedHeight: 11, success: true, hashKind: 'deploy' }, // installVault
+    { finalizedHeight: 12, success: true, hashKind: 'deploy' }, // allowAgent
+    { finalizedHeight: 13, success: true, hashKind: 'deploy' }, // allowReceiver
+    { finalizedHeight: 14, success: true, hashKind: 'deploy' }, // fundVault
+    { finalizedHeight: 20, success: true, hashKind: 'deploy' }, // accepted pay
+    { finalizedHeight: 21, success: false, errorCode: 3, hashKind: 'deploy' }, // receiver_not_allowed
+    { finalizedHeight: 22, success: false, errorCode: 4, hashKind: 'deploy' }, // over_max_single_payment
   ];
   let i = 0;
   return {

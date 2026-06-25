@@ -53,7 +53,12 @@ describe('GET /vaults', () => {
     const res = await app.request('/vaults');
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      vaults: Array<{ id: string; usedTodayAtomic: string; perDayCapAtomic: string; token: string }>;
+      vaults: Array<{
+        id: string;
+        usedTodayAtomic: string;
+        perDayCapAtomic: string;
+        token: string;
+      }>;
     };
     expect(body.vaults).toHaveLength(1);
     expect(body.vaults[0]?.id).toBe(vaultId(deps.policy));
