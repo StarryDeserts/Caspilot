@@ -28,6 +28,6 @@
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22",
     "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "vitest": "^3.2.6"
   }
 }
