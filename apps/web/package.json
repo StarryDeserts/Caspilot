@@ -16,7 +16,7 @@
     "@make-software/csprclick-core-client": "^1.11.0",
     "@make-software/csprclick-core-types": "^2.1.0",
     "@make-software/csprclick-ui": "^2.1.0",
-    "next": "14.2.5",
+    "next": "15.5.18",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "zod": "3.23.8"
