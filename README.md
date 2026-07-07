@@ -13,7 +13,7 @@
 
 Casper Agentic Buildathon 2026 · Casper Innovation Track
 
-📺 **[Demo video](#demo-video)** &nbsp;·&nbsp; 🔗 **[On-chain proof](#the-headline-this-is-real-and-you-can-check-it-yourself)** &nbsp;·&nbsp; 🛡️ **[Security model](#security-model)** &nbsp;·&nbsp; ⚡ **[Quickstart](#quickstart)**
+📺 **[Demo video](#demo-video)** &nbsp;·&nbsp; 🔗 **[On-chain proof](#the-headline-this-is-real-and-you-can-check-it-yourself)** &nbsp;·&nbsp; 🧪 **[Judge playbook](#judge-testing-playbook-concise)** &nbsp;·&nbsp; 🛡️ **[Security model](#security-model)** &nbsp;·&nbsp; ⚡ **[Quickstart](#quickstart)**
 
 </div>
 
@@ -25,7 +25,8 @@ Caspilot's core claim — *an on-chain policy gate that stops a misbehaving agen
 
 | Step | Result | Hash | On-chain outcome |
 |---|---|---|---|
-| Deploy PolicyVault | ✅ installed | [`bf555d60…5431`](https://testnet.cspr.live/deploy/bf555d60bcbb3b9375d8281f32dceb86523fd0b5103ea11f409838ab3f2d5431) | contract [`8f75ba25…d63e`](https://testnet.cspr.live/contract/8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e) |
+| Deploy PolicyVault | ✅ installed | [`bf555d60…5431`](https://testnet.cspr.live/deploy/bf555d60bcbb3b9375d8281f32dceb86523fd0b5103ea11f409838ab3f2d5431) | package `ff2d4e13…7fb9` → contract [`8f75ba25…d63e`](https://testnet.cspr.live/contract/8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e) |
+| Deploy demo CEP-18 token | ✅ installed | recovered from the same deployer account | package `0f8b1bd8…e38a` → contract `89522729…1c9d` |
 | `pay()` **accepted** | ✅ transfer | [`a7419aa2…2bdf5`](https://testnet.cspr.live/deploy/a7419aa2fcedff56b76fe509ecc745b9f1da0ecd5b26e0205a0241061242bdf5) | 50 tokens → allowlisted receiver |
 | `pay()` **rejected** — receiver not allowed | ⛔ reverted | [`e6801a75…cec7`](https://testnet.cspr.live/deploy/e6801a750b58bbe955240b0fef19e53ced76219be397043bb1f56e03280bcec7) | `User error: 3` (`ReceiverNotAllowed`) |
 | `pay()` **rejected** — over per-payment max | ⛔ reverted | [`c4a48997…0eea`](https://testnet.cspr.live/deploy/c4a48997dfcd7c56c2d019caaa771467f71d48d50ca85584218fb2a9327a0eea) | `User error: 4` (`AmountAboveMax`) |
@@ -143,6 +144,31 @@ Open <http://localhost:3001> → **Intents** to draft a payment intent and **Int
 ### Reproduce the on-chain proof (optional, spends test-CSPR)
 
 Opt-in, **casper-test only**, gated behind `RUN_REAL_ONCHAIN=1`. Full env and command in [`docs/tier1-demo.md`](docs/tier1-demo.md#reproduce-it-live-optional).
+
+---
+
+## Judge testing playbook (concise)
+
+This is the no-marketing path for buildathon reviewers:
+
+1. **Verify the deployed Casper Testnet proof** — open the hashes in the headline table above. The mandatory PolicyVault package is `ff2d4e132f979f6d5c1af13d34270acfddc75a7c98c323be4d8b668140fb7fb9`; its live contract hash is `8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e`. The demo CEP-18 token package is `0f8b1bd871aa5061b278c1a45d653cb2f29a40f79e76196e35beb3851225e38a`.
+2. **Watch the UI workflow** — the 3m44s demo video shows the actual reviewer path: create intent → validate policy → CSPR.click wallet co-sign → backend on-chain confirmation → explorer proof → rejected policy violations.
+3. **Run the local MVP** — `pnpm install && pnpm --filter api dev` in one shell, `pnpm --filter web dev` in another, then open <http://localhost:3001>. The seeded API lets you inspect the intent FSM and audit trace without spending test-CSPR.
+4. **Run the verification gates** — `pnpm typecheck`, `pnpm test`, and `node scripts/check-cargo.mjs`. The real-broadcast tests are gated and self-skip unless `RUN_REAL_ONCHAIN=1` is set.
+5. **Optional live wallet replay** — use a Casper wallet on `casper-test` with test CSPR, set `NEXT_PUBLIC_CSPRCLICK_APP_ID` and `NEXT_PUBLIC_CASPILOT_API_BASE`, then follow [`docs/demo-recording.md`](docs/demo-recording.md). Do not click explorer links for synthetic seeded hashes; only the hashes documented above are durable on-chain proof.
+
+## Buildathon qualification checklist
+
+- **GitHub repository** — public MIT repo with CI, CodeQL workflow, Dependabot config, security policy, contributing guide, pull-request template, and issue templates. Required topics are set on GitHub: `casper-blockchain`, `casper-network`, `buildathon`.
+- **Application** — functional MVP with a Next.js UI, Hono API, x402 gateway, CSPR.click co-sign flow, and a deployed Casper Testnet PolicyVault proof.
+- **BUIDL page fields** — copy these package hashes and sample transactions without rebuilding:
+  - PolicyVault package: `ff2d4e132f979f6d5c1af13d34270acfddc75a7c98c323be4d8b668140fb7fb9`.
+  - PolicyVault contract: `8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e`.
+  - Demo CEP-18 package: `0f8b1bd871aa5061b278c1a45d653cb2f29a40f79e76196e35beb3851225e38a`.
+  - Accepted vault payment: `a7419aa2fcedff56b76fe509ecc745b9f1da0ecd5b26e0205a0241061242bdf5` — 50 demo tokens transferred to the allowlisted receiver.
+  - Rejected vault payment: `e6801a750b58bbe955240b0fef19e53ced76219be397043bb1f56e03280bcec7` — receiver not allowlisted, reverted as `User error: 3`.
+  - Rejected vault payment: `c4a48997dfcd7c56c2d019caaa771467f71d48d50ca85584218fb2a9327a0eea` — amount above the per-payment max, reverted as `User error: 4`.
+  - UI co-sign transaction: `299d1288e7edfed64e1de6ca9d229834b02f2de22d75999b59a09b5403fe7543` — human CSPR.click signer paid and the backend confirmed on-chain before recording.
 
 ---
 

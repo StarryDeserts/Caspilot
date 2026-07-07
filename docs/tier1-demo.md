@@ -10,12 +10,19 @@ Real casper-test run, 2026-06-15, finalized across blocks **8185770–8185776**.
 
 | Step | Result | Deploy hash | On-chain outcome |
 |---|---|---|---|
-| Deploy PolicyVault | ✅ installed | [`bf555d60…5431`](https://testnet.cspr.live/deploy/bf555d60bcbb3b9375d8281f32dceb86523fd0b5103ea11f409838ab3f2d5431) | contract `8f75ba25…d63e` |
+| Deploy PolicyVault | ✅ installed | [`bf555d60…5431`](https://testnet.cspr.live/deploy/bf555d60bcbb3b9375d8281f32dceb86523fd0b5103ea11f409838ab3f2d5431) | package `ff2d4e13…7fb9` → contract `8f75ba25…d63e` |
+| Deploy demo CEP-18 token | ✅ installed | recovered from the same deployer account | package `0f8b1bd8…e38a` → contract `89522729…1c9d` |
 | `pay()` accepted | ✅ transfer | [`a7419aa2…2bdf5`](https://testnet.cspr.live/deploy/a7419aa2fcedff56b76fe509ecc745b9f1da0ecd5b26e0205a0241061242bdf5) | 50 tokens to the allowlisted receiver |
 | `pay()` rejected — receiver not allowed | ⛔ reverted | [`e6801a75…cec7`](https://testnet.cspr.live/deploy/e6801a750b58bbe955240b0fef19e53ced76219be397043bb1f56e03280bcec7) | `User error: 3` (`ReceiverNotAllowed`) |
 | `pay()` rejected — over per-payment max | ⛔ reverted | [`c4a48997…0eea`](https://testnet.cspr.live/deploy/c4a48997dfcd7c56c2d019caaa771467f71d48d50ca85584218fb2a9327a0eea) | `User error: 4` (`AmountAboveMax`) |
 
-Vault contract: [`8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e`](https://testnet.cspr.live/contract/8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e).
+Vault package hash: `ff2d4e132f979f6d5c1af13d34270acfddc75a7c98c323be4d8b668140fb7fb9`.
+
+Vault contract hash: [`8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e`](https://testnet.cspr.live/contract/8f75ba257f61ae1bbfa1f974a617705e519757445a77189d7c011327bdc5d63e).
+
+Demo CEP-18 package hash: `0f8b1bd871aa5061b278c1a45d653cb2f29a40f79e76196e35beb3851225e38a`.
+
+Demo CEP-18 contract hash: `89522729a590b87af51d9d64831a03fb823bfd9dfb254feb0e446a2275601c9d`.
 
 The two rejection codes are the **raw `PolicyVaultError` discriminants** from `contracts/policy-vault/src/errors.rs` (`NotOwner=1, AgentNotAllowed=2, ReceiverNotAllowed=3, AmountAboveMax=4, DayLimitExceeded=5, VaultExpired=6, NonceAlreadyUsed=7, InsufficientVaultBalance=8`). Odra surfaces a `self.revert(PolicyVaultError::X)` as `runtime::revert(ApiError::User(n))`, which the node records as `error_message: "User error: n"`.
 
