@@ -16,7 +16,8 @@ export interface HttpFacilitatorClientOptions {
 
 export function makeHttpFacilitatorClient(opts: HttpFacilitatorClientOptions): FacilitatorClient {
   const fetchImpl = opts.fetch ?? globalThis.fetch;
-  const base = opts.baseUrl.replace(/\/+$/, '');
+  let base = opts.baseUrl;
+  while (base.endsWith('/')) base = base.slice(0, -1);
   const authHeaders: Record<string, string> = opts.apiKey
     ? { authorization: `Bearer ${opts.apiKey}` }
     : {};

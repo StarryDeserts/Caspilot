@@ -12,13 +12,13 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "@caspilot/intent-fsm": "workspace:*",
-    "@caspilot/signer-guard": "workspace:*",
-    "@caspilot/payment-ledger": "workspace:*",
-    "@caspilot/audit-trace": "workspace:*",
     "@caspilot/adapters": "workspace:*",
-    "hono": "^4.6.3",
+    "@caspilot/audit-trace": "workspace:*",
+    "@caspilot/intent-fsm": "workspace:*",
+    "@caspilot/payment-ledger": "workspace:*",
+    "@caspilot/signer-guard": "workspace:*",
     "@hono/node-server": "^1.13.0",
+    "hono": "^4.6.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -26,6 +26,6 @@
     "@types/node": "^22",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
-    "vitest": "^2.0.5"
+    "vitest": "^3.2.6"
   }
 }

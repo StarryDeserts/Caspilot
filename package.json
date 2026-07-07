@@ -22,6 +22,9 @@
     "wabt": "^1.0.39"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
+    "onlyBuiltDependencies": ["better-sqlite3"],
+    "overrides": {
+      "form-data": "4.0.6"
+    }
   }
 }

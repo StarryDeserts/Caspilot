@@ -33,11 +33,28 @@ describe('makeHttpFacilitatorClient', () => {
     expect(call?.[1]?.body).toBe(JSON.stringify(req));
   });
 
-  it('trims a trailing slash from baseUrl', async () => {
+  it('trims all trailing slashes from baseUrl without a regex', async () => {
     const fetchMock = fakeFetch(async () => jsonResponse({ ok: true }));
-    const client = makeHttpFacilitatorClient({ baseUrl: 'https://fac.test/', fetch: fetchMock });
+    const originalReplace = String.prototype.replace;
+    String.prototype.replace = function patchedReplace(
+      this: string,
+      searchValue: string | RegExp,
+      replaceValue: string,
+    ): string {
+      if (searchValue instanceof RegExp) throw new Error('regex trim is not allowed');
+      return Reflect.apply(originalReplace, this, [searchValue, replaceValue]) as string;
+    } as typeof String.prototype.replace;
 
-    await client.settle(req);
+    try {
+      const client = makeHttpFacilitatorClient({
+        baseUrl: 'https://fac.test///',
+        fetch: fetchMock,
+      });
+
+      await client.settle(req);
+    } finally {
+      String.prototype.replace = originalReplace;
+    }
 
     expect(vi.mocked(fetchMock).mock.calls[0]?.[0]).toBe('https://fac.test/settle');
   });

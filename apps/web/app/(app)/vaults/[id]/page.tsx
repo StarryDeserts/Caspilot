@@ -1,11 +1,6 @@
-'use client';
-import { CaspilotApi } from '@/lib/api.js';
-import { VaultDetailView } from '@/components/VaultDetailView.js';
+import { VaultDetailClientPage } from './client-page.js';
 
-const api = new CaspilotApi({
-  baseUrl: process.env.NEXT_PUBLIC_CASPILOT_API_BASE ?? 'http://localhost:8787',
-});
-
-export default function VaultDetail({ params }: { params: { id: string } }) {
-  return <VaultDetailView id={params.id} api={api} />;
+export default async function VaultDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <VaultDetailClientPage id={id} />;
 }
