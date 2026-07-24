@@ -18,7 +18,7 @@
     "@caspilot/payment-ledger": "workspace:*",
     "@caspilot/signer-guard": "workspace:*",
     "@hono/node-server": "^1.13.0",
-    "hono": "^4.6.3",
+    "hono": "^4.12.27",
     "zod": "^3.23.8"
   },
   "devDependencies": {
