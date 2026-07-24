@@ -17,7 +17,7 @@
     "@caspilot/intent-fsm": "workspace:*",
     "@caspilot/payment-ledger": "workspace:*",
     "@caspilot/signer-guard": "workspace:*",
-    "@hono/node-server": "^1.13.0",
+    "@hono/node-server": "^2.0.10",
     "hono": "^4.6.3",
     "zod": "^3.23.8"
   },
