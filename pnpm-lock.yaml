@@ -18,8 +18,8 @@ importers:
         specifier: ^130.0.0
         version: 130.0.0
       js-yaml:
-        specifier: ^4.1.0
-        version: 4.2.0
+        specifier: ^4.3.0
+        version: 4.3.0
       wabt:
         specifier: ^1.0.39
         version: 1.0.39
@@ -1130,8 +1130,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@make-software/cspr-design@https://codeload.github.com/make-software/cspr-design/tar.gz/0c4ef00c109704d027a4e92b54816bbb0817c73b':
-    resolution: {tarball: https://codeload.github.com/make-software/cspr-design/tar.gz/0c4ef00c109704d027a4e92b54816bbb0817c73b}
+  '@make-software/cspr-design@git+https://git@github.com:make-software/cspr-design.git#0c4ef00c109704d027a4e92b54816bbb0817c73b':
+    resolution: {commit: 0c4ef00c109704d027a4e92b54816bbb0817c73b, repo: git@github.com:make-software/cspr-design.git, type: git}
     version: 2.0.7
     peerDependencies:
       react: ^18.3.0
@@ -2115,8 +2115,8 @@ packages:
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
 
-  js-yaml@4.2.0:
-    resolution: {integrity: sha512-ePWsvanv0DWuDRsW8dnt+R4jQ31SCRCQ7hhNcPXZPsoBZiemuZNYGf7adZdqX2D86j6rvKp3RpCxVTSb8WQlOw==}
+  js-yaml@4.3.0:
+    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
     hasBin: true
 
   jsdom@24.1.3:
@@ -3504,7 +3504,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@make-software/cspr-design@https://codeload.github.com/make-software/cspr-design/tar.gz/0c4ef00c109704d027a4e92b54816bbb0817c73b(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(styled-components@5.3.11(@babel/core@7.29.7)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1))(typescript@5.5.4)':
+  '@make-software/cspr-design@git+https://git@github.com:make-software/cspr-design.git#0c4ef00c109704d027a4e92b54816bbb0817c73b(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(styled-components@5.3.11(@babel/core@7.29.7)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1))(typescript@5.5.4)':
     dependencies:
       '@formatjs/intl': 3.1.8(typescript@5.5.4)
       big.js: 7.0.1
@@ -3536,7 +3536,7 @@ snapshots:
 
   '@make-software/csprclick-ui@2.1.0(@types/react@18.3.31)(react-country-flag@3.1.0(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react-modal@3.16.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)(styled-components@5.3.11(@babel/core@7.29.7)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1))(typescript@5.5.4)':
     dependencies:
-      '@make-software/cspr-design': https://codeload.github.com/make-software/cspr-design/tar.gz/0c4ef00c109704d027a4e92b54816bbb0817c73b(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(styled-components@5.3.11(@babel/core@7.29.7)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1))(typescript@5.5.4)
+      '@make-software/cspr-design': git+https://git@github.com:make-software/cspr-design.git#0c4ef00c109704d027a4e92b54816bbb0817c73b(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(styled-components@5.3.11(@babel/core@7.29.7)(react-dom@18.3.1(react@18.3.1))(react-is@18.3.1)(react@18.3.1))(typescript@5.5.4)
       qrcode.react: 4.2.0(react@18.3.1)
       react: 18.3.1
       react-country-flag: 3.1.0(react@18.3.1)
@@ -4457,7 +4457,7 @@ snapshots:
 
   js-tokens@9.0.1: {}
 
-  js-yaml@4.2.0:
+  js-yaml@4.3.0:
     dependencies:
       argparse: 2.0.1
 
